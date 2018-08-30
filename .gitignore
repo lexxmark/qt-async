@@ -1,0 +1,10 @@
+/tmp/
+/bin/
+/bin-*/
+build-*
+/workdir/
+*.pro.user
+*~
+*.directory
+*.autosave
+*Thumbs.db
