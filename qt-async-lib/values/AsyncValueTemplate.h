@@ -14,96 +14,38 @@
    limitations under the License.
 */
 
-#ifndef ASYNC_VALUE_H
-#define ASYNC_VALUE_H
+#ifndef ASYNC_VALUE_TEMPLATE_H
+#define ASYNC_VALUE_TEMPLATE_H
 
+#include "AsyncValueBase.h"
 #include <QMutex>
-#include <QObject>
 #include <QReadWriteLock>
-#include <QThreadPool>
-#include <QtConcurrent>
 
-enum class ASYNC_VALUE_STATE
-{
-    VALUE,
-    PROGRESS,
-    ERROR
-};
-Q_DECLARE_METATYPE(ASYNC_VALUE_STATE);
+struct AsyncInitByValue {};
+struct AsyncInitByError {};
 
-class AsyncError
-{
-    Q_DISABLE_COPY(AsyncError)
-
-public:
-    AsyncError(QString message)
-        : m_message(std::move(message))
-    {}
-
-    QString message() const { return m_message; }
-
-private:
-    QString m_message;
-};
-
-class AsyncProgress
-{
-    Q_DISABLE_COPY(AsyncProgress)
-
-public:
-    AsyncProgress(QString message, bool canRequestStop);
-
-    QString message() const;
-    float progress() const;
-    bool canRequestStop() const;
-    bool isStopRequested() const;
-
-    void setMessage(QString message);
-    void setProgress(float progress);
-    void requestStop();
-
-private:
-    QString m_message;
-    float m_progress = 0.f;
-    bool m_canRequestStop = true;
-    bool m_isStopRequested = false;
-};
-
-class AsyncValueBase : public QObject
-{
-    Q_OBJECT
-    Q_DISABLE_COPY(AsyncValueBase)
-
-public:
-    AsyncValueBase(QObject* parent = nullptr);
-
-signals:
-    void stateChanged(ASYNC_VALUE_STATE state);
-};
-
-template <typename T>
-class AsyncValue : public AsyncValueBase
+template <typename ValueType_t, typename ErrorType_t, typename ProgressType_t>
+class AsyncValueTemplate : public AsyncValueBase
 {
 public:
-    explicit AsyncValue(QObject* parent = nullptr)
-        : AsyncValue(ASYNC_VALUE_STATE::ERROR, parent)
+    using ValueType = ValueType_t;
+    using ErrorType = ErrorType_t;
+    using ProgressType = ProgressType_t;
+
+    template <typename... Args>
+    explicit AsyncValueTemplate(QObject* parent, AsyncInitByValue, Args&& ...arguments)
+        : AsyncValueTemplate(ASYNC_VALUE_STATE::VALUE, parent)
     {
-        setError("");
+        emplaceValue(std::forward<Args>(arguments)...);
     }
 
     template <typename... Args>
     void emplaceValue(Args&& ...arguments)
     {
-        moveValue(std::make_unique<T>(std::forward<Args>(arguments)...));
+        moveValue(std::make_unique<ValueType>(std::forward<Args>(arguments)...));
     }
 
-    template <typename U>
-    void setValue(U value)
-    {
-        moveValue(std::make_unique<T>(std::forward<U>(value)));
-    }
-
-    void moveValue(std::unique_ptr<T> value)
+    void moveValue(std::unique_ptr<ValueType> value)
     {
         Content oldContent;
 
@@ -119,7 +61,20 @@ public:
         emitStateChanged();
     }
 
-    void setError(QString message)
+    template <typename... Args>
+    explicit AsyncValueTemplate(QObject* parent, AsyncInitByError , Args&& ...arguments)
+        : AsyncValueTemplate(ASYNC_VALUE_STATE::ERROR, parent)
+    {
+        emplaceError(std::forward<Args>(arguments)...);
+    }
+
+    template <typename... Args>
+    void emplaceError(Args&& ...arguments)
+    {
+        moveError(std::make_unique<ErrorType>(std::forward<Args>(arguments)...));
+    }
+
+    void moveError(std::unique_ptr<ErrorType> error)
     {
         Content oldContent;
 
@@ -128,14 +83,20 @@ public:
             QWriteLocker locker(&m_contentLock);
 
             oldContent = std::move(m_content);
-            m_content.error = std::make_unique<AsyncError>(std::move(message));
+            m_content.error = std::move(error);
             m_state = ASYNC_VALUE_STATE::ERROR;
         }
 
         emitStateChanged();
     }
 
-    AsyncProgress* startProgress(QString message, bool canRequestStop)
+    template <typename... Args>
+    ProgressType* startProgressEmplace(Args&& ...arguments)
+    {
+        return startProgressMove(std::make_unique<ProgressType>(std::forward<Args>(arguments)...));
+    }
+
+    ProgressType* startProgressMove(std::unique_ptr<ProgressType> progress)
     {
         Content oldContent;
 
@@ -151,7 +112,7 @@ public:
             QWriteLocker locker(&m_contentLock);
 
             oldContent = std::move(m_content);
-            m_progress = std::make_unique<AsyncProgress>(std::move(message), canRequestStop);
+            m_progress = std::move(progress);
             m_state = ASYNC_VALUE_STATE::PROGRESS;
         }
 
@@ -160,7 +121,7 @@ public:
         return m_progress.get();
     }
 
-    bool stopProgress(AsyncProgress* progress = nullptr)
+    bool stopProgress(ProgressType* progress = nullptr)
     {
         QMutexLocker writeLocker(&m_writeLock);
 
@@ -168,13 +129,17 @@ public:
             return false;
 
         if (m_state == ASYNC_VALUE_STATE::PROGRESS)
-            setError("No value or error assigned");
+        {
+            Q_ASSERT(false && "No value or error assigned");
+            return false;
+        }
 
+        m_progress = nullptr;
         return true;
     }
 
-    template <typename ValuePred, typename ProgressPred, typename ErrorPred>
-    void access(ValuePred valuePred, ProgressPred progressPred, ErrorPred errorPred)
+    template <typename ValuePred, typename ErrorPred, typename ProgressPred>
+    void access(ValuePred valuePred, ErrorPred errorPred, ProgressPred progressPred)
     {
         QReadLocker locker(&m_contentLock);
 
@@ -184,12 +149,12 @@ public:
             valuePred(*m_content.value);
             break;
 
-        case ASYNC_VALUE_STATE::PROGRESS:
-            progressPred(*m_progress);
-            break;
-
         case ASYNC_VALUE_STATE::ERROR:
             errorPred(*m_content.error);
+            break;
+
+        case ASYNC_VALUE_STATE::PROGRESS:
+            progressPred(*m_progress);
             break;
         }
     }
@@ -231,7 +196,7 @@ public:
      }
 
 private:
-    explicit AsyncValue(ASYNC_VALUE_STATE state, QObject* parent = nullptr)
+    explicit AsyncValueTemplate(ASYNC_VALUE_STATE state, QObject* parent = nullptr)
         : AsyncValueBase(parent),
           m_writeLock(QMutex::Recursive),
           m_contentLock(QReadWriteLock::Recursive),
@@ -250,24 +215,12 @@ private:
 
     struct Content
     {
-        std::unique_ptr<T> value;
-        std::unique_ptr<AsyncError> error;
+        std::unique_ptr<ValueType> value;
+        std::unique_ptr<ErrorType> error;
     };
     Content m_content;
-    std::unique_ptr<AsyncProgress> m_progress;
+
+    std::unique_ptr<ProgressType> m_progress;
 };
 
-template <typename T, typename Func>
-void aquireAsyncValue(QThreadPool *pool, AsyncValue<T>& value, QString progressMessage, bool canRequestStop, Func func)
-{
-    auto progress = value.startProgress(std::move(progressMessage), canRequestStop);
-    if (!progress)
-        return;
-
-    QtConcurrent::run(pool, [&value, progress = progress, func = std::move(func)](){
-        func(*progress, value);
-        value.stopProgress();
-    });
-}
-
-#endif // ASYNC_VALUE_H
+#endif // ASYNC_VALUE_TEMPLATE_H

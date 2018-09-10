@@ -8,10 +8,19 @@ VERSION = 1.0.0
 QT       += widgets concurrent
 QT       -= gui
 
-SOURCES += AsyncValue.cpp \
-            AsyncWidget.cpp
+SOURCES += \
+    values/AsyncValueBase.cpp \
+    widgets/AsyncWidgetProxy.cpp
 
-HEADERS += AsyncValue.h \
-            AsyncWidget.h
+HEADERS += \
+    values/AsyncValueBase.h \
+    values/AsyncValueTemplate.h \
+    values/AsyncError.h \
+    values/AsyncProgress.h \
+    values/AsyncValue.h \
+    values/AsyncValueObtain.h \
+    widgets/AsyncWidgetProxy.h \
+    widgets/AsyncWidgetBase.h \
+    widgets/AsyncWidget.h
 	
 DEFINES += QT_DEPRECATED_WARNINGS

@@ -111,7 +111,7 @@
      </layout>
     </item>
     <item>
-     <widget class="WidgetProxy" name="widget" native="true">
+     <widget class="AsyncWidgetProxy" name="widget" native="true">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
         <horstretch>0</horstretch>
@@ -126,9 +126,9 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>WidgetProxy</class>
+   <class>AsyncWidgetProxy</class>
    <extends>QWidget</extends>
-   <header location="global">AsyncWidget.h</header>
+   <header location="global">widgets/AsyncWidgetProxy.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

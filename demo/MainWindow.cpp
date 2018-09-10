@@ -2,18 +2,19 @@
 #include "ui_MainWindow.h"
 #include <QDesktopWidget>
 #include <thread>
-#include "AsyncWidget.h"
+#include "widgets/AsyncWidget.h"
+#include "values/AsyncValueObtain.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
+    ui(new Ui::MainWindow),
+    m_value(this, AsyncInitByValue{}, "Hello World!")
 {
     ui->setupUi(this);
     move(QApplication::desktop()->availableGeometry().center() - rect().center());
 
-    m_value.setValue("Hello");
-    auto valueWidget = QSharedPointer<AsyncValueWidget<QString>>::create(ui->widget);
-    ui->widget->setContent(valueWidget);
+    auto valueWidget = QSharedPointer<AsyncWidget<QString>>::create(ui->widget);
+    ui->widget->setContentWidget(valueWidget);
     valueWidget->setValue(&m_value);
 
     QObject::connect(&m_value, &AsyncQString::stateChanged, this, &MainWindow::OnAsyncValueChanged);
@@ -33,7 +34,7 @@ void MainWindow::OnAsyncValueChanged(ASYNC_VALUE_STATE state)
 
 void MainWindow::on_errorBttn_clicked()
 {
-    m_value.setError("Error happened!");
+    m_value.emplaceError("Error happened!");
 }
 
 void MainWindow::on_valueBttn_clicked()
@@ -43,7 +44,7 @@ void MainWindow::on_valueBttn_clicked()
 
 void MainWindow::on_startBttn_clicked()
 {
-    aquireAsyncValue(QThreadPool::globalInstance(), m_value, "Loading...", true, [](AsyncProgress& progress, AsyncValue<QString>& value){
+    asyncValueObtain(QThreadPool::globalInstance(), m_value, [](AsyncProgress& progress, AsyncValue<QString>& value){
 
         using namespace std::chrono_literals;
         for (auto i : {0, 1, 2, 3, 4})
@@ -51,7 +52,7 @@ void MainWindow::on_startBttn_clicked()
             progress.setProgress((float)i/4.f);
             if (progress.isStopRequested())
             {
-                value.setError("Stopped");
+                value.emplaceError("Stopped");
                 return;
             }
 
@@ -59,8 +60,8 @@ void MainWindow::on_startBttn_clicked()
         }
 
         QString val = "Result";
-        value.setValue(std::move(val));
-    });
+        value.emplaceValue(std::move(val));
+    }, "Loading...", true);
 }
 
 

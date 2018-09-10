@@ -14,16 +14,11 @@
    limitations under the License.
 */
 
-#include "AsyncWidget.h"
+#include "AsyncWidgetProxy.h"
 #include <QLabel>
 #include <QResizeEvent>
 
-WidgetProxy::WidgetProxy(QWidget* parent)
-    : QWidget (parent)
-{
-}
-
-void WidgetProxy::setContent(QSharedPointer<QWidget> content)
+void AsyncWidgetProxy::setContentWidget(QSharedPointer<QWidget> content)
 {
     if (m_content == content)
         return;
@@ -38,7 +33,7 @@ void WidgetProxy::setContent(QSharedPointer<QWidget> content)
     }
 }
 
-void WidgetProxy::resizeEvent(QResizeEvent *event)
+void AsyncWidgetProxy::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
 
@@ -46,7 +41,7 @@ void WidgetProxy::resizeEvent(QResizeEvent *event)
         m_content->setGeometry(QRect(QPoint(0, 0), event->size()));
 }
 
-QSharedPointer<QWidget> WidgetProxy::createLabel(QString text, QWidget* parent)
+QSharedPointer<QWidget> AsyncWidgetProxy::createLabel(QString text, QWidget* parent)
 {
     auto label = QSharedPointer<QLabel>::create(text, parent);
     label->setFrameStyle(QFrame::Panel | QFrame::Plain);
