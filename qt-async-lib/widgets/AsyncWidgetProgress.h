@@ -14,29 +14,37 @@
    limitations under the License.
 */
 
-#ifndef ASYNC_WIDGET_PROXY_H
-#define ASYNC_WIDGET_PROXY_H
+#ifndef ASYNC_WIDGET_PROGRESS_H
+#define ASYNC_WIDGET_PROGRESS_H
 
-#include <QWidget>
+#include <QFrame>
+#include "values/AsyncProgress.h"
 
-class AsyncWidgetProxy : public QWidget
+class QLabel;
+class QProgressBar;
+class QPushButton;
+class QTimeLine;
+
+class AsyncWidgetProgress : public QFrame
 {
     Q_OBJECT
-    Q_DISABLE_COPY(AsyncWidgetProxy)
+    Q_DISABLE_COPY(AsyncWidgetProgress)
 
 public:
-    using QWidget::QWidget;
+    explicit AsyncWidgetProgress(AsyncProgress& progress, QWidget* parent);
 
-    QWidget* contentWidget() const { return m_content; }
-    void setContentWidget(QWidget* content);
-
-    static QWidget* createLabel(QString text, QWidget* parent);
-
-protected:
-    void resizeEvent(QResizeEvent *event) override;
+private slots:
+    void onStopClicked(bool checked);
 
 private:
-   QWidget* m_content = nullptr;
+    void update();
+
+    AsyncProgress& m_progress;
+
+    QLabel* m_message = nullptr;
+    QProgressBar* m_progressBar = nullptr;
+    QPushButton* m_stop = nullptr;
+    QTimeLine* m_progressBarTimeLine = nullptr;
 };
 
-#endif // ASYNC_WIDGET_PROXY_H
+#endif // ASYNC_WIDGET_PROGRESS_H

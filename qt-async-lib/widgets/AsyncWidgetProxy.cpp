@@ -18,12 +18,16 @@
 #include <QLabel>
 #include <QResizeEvent>
 
-void AsyncWidgetProxy::setContentWidget(QSharedPointer<QWidget> content)
+void AsyncWidgetProxy::setContentWidget(QWidget* content)
 {
     if (m_content == content)
         return;
 
-    m_content = std::move(content);
+    auto oldContent = m_content;
+    if (oldContent)
+        oldContent->hide();
+
+    m_content = content;
 
     if (m_content)
     {
@@ -31,6 +35,9 @@ void AsyncWidgetProxy::setContentWidget(QSharedPointer<QWidget> content)
         m_content->setGeometry(rect());
         m_content->show();
     }
+
+    if (oldContent)
+        delete oldContent;
 }
 
 void AsyncWidgetProxy::resizeEvent(QResizeEvent *event)
@@ -41,11 +48,18 @@ void AsyncWidgetProxy::resizeEvent(QResizeEvent *event)
         m_content->setGeometry(QRect(QPoint(0, 0), event->size()));
 }
 
-QSharedPointer<QWidget> AsyncWidgetProxy::createLabel(QString text, QWidget* parent)
+QWidget* AsyncWidgetProxy::createLabel(QString text, QWidget* parent)
 {
-    auto label = QSharedPointer<QLabel>::create(text, parent);
+    auto label = new QLabel(text, parent);
+    label->setAutoFillBackground(true);
     label->setFrameStyle(QFrame::Panel | QFrame::Plain);
-    label->setLineWidth(2);
+    label->setLineWidth(1);
+    label->setWordWrap(true);
+    auto _palette = label->palette();
+    _palette.setColor(QPalette::Normal, QPalette::Window, Qt::white);
+    label->setPalette(_palette);
+    label->setAlignment(Qt::AlignCenter);
+
     return label;
 }
 

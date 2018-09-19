@@ -19,19 +19,25 @@
 
 #include <QObject>
 
+enum class ASYNC_CAN_REQUEST_STOP
+{
+    YES,
+    NO
+};
+
 class AsyncProgress
 {
     Q_DISABLE_COPY(AsyncProgress)
 
 public:
-    AsyncProgress(QString message, bool canRequestStop)
+    AsyncProgress(QString message, ASYNC_CAN_REQUEST_STOP canRequestStop)
         : m_message(std::move(message)),
           m_canRequestStop(canRequestStop)
     {}
 
     QString message() const { return m_message; }
     float progress() const { return m_progress; }
-    bool canRequestStop() const { return m_canRequestStop; }
+    bool canRequestStop() const { return m_canRequestStop == ASYNC_CAN_REQUEST_STOP::YES; }
     bool isStopRequested() const { return m_isStopRequested; }
 
     void setMessage(QString message) { m_message = std::move(message); }
@@ -41,7 +47,7 @@ public:
 private:
     QString m_message;
     float m_progress = 0.f;
-    bool m_canRequestStop = true;
+    ASYNC_CAN_REQUEST_STOP m_canRequestStop = ASYNC_CAN_REQUEST_STOP::YES;
     bool m_isStopRequested = false;
 };
 

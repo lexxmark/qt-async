@@ -18,8 +18,12 @@
 #define ASYNC_VALUE_TEMPLATE_H
 
 #include "AsyncValueBase.h"
-#include <QMutex>
-#include <QReadWriteLock>
+
+struct AsyncNoOp
+{
+    template <typename T>
+    void operator()(const T&) const {}
+};
 
 struct AsyncInitByValue {};
 struct AsyncInitByError {};
@@ -34,9 +38,14 @@ public:
 
     template <typename... Args>
     explicit AsyncValueTemplate(QObject* parent, AsyncInitByValue, Args&& ...arguments)
-        : AsyncValueTemplate(ASYNC_VALUE_STATE::VALUE, parent)
+        : AsyncValueBase(ASYNC_VALUE_STATE::VALUE, parent)
     {
         emplaceValue(std::forward<Args>(arguments)...);
+    }
+
+    ~AsyncValueTemplate()
+    {
+        Q_ASSERT(m_state != ASYNC_VALUE_STATE::PROGRESS);
     }
 
     template <typename... Args>
@@ -59,11 +68,15 @@ public:
         }
 
         emitStateChanged();
+
+        // notify all waiters
+        if (m_waiter)
+            m_waiter->waitValue.wakeAll();
     }
 
     template <typename... Args>
-    explicit AsyncValueTemplate(QObject* parent, AsyncInitByError , Args&& ...arguments)
-        : AsyncValueTemplate(ASYNC_VALUE_STATE::ERROR, parent)
+    explicit AsyncValueTemplate(QObject* parent, AsyncInitByError, Args&& ...arguments)
+        : AsyncValueBase(ASYNC_VALUE_STATE::ERROR, parent)
     {
         emplaceError(std::forward<Args>(arguments)...);
     }
@@ -88,6 +101,10 @@ public:
         }
 
         emitStateChanged();
+
+        // notify all waiters
+        if (m_waiter)
+            m_waiter->waitValue.wakeAll();
     }
 
     template <typename... Args>
@@ -126,7 +143,10 @@ public:
         QMutexLocker writeLocker(&m_writeLock);
 
         if (progress && (progress != m_progress.get()))
+        {
+            Q_ASSERT(false && "Progress was started with different progress instance");
             return false;
+        }
 
         if (m_state == ASYNC_VALUE_STATE::PROGRESS)
         {
@@ -159,8 +179,28 @@ public:
         }
     }
 
+    template <typename ValuePred, typename ErrorPred>
+    bool access(ValuePred valuePred, ErrorPred errorPred)
+    {
+        QReadLocker locker(&m_contentLock);
+
+        switch (m_state)
+        {
+        case ASYNC_VALUE_STATE::VALUE:
+            valuePred(*m_content.value);
+            return true;
+
+        case ASYNC_VALUE_STATE::ERROR:
+            errorPred(*m_content.error);
+            return true;
+
+        default:
+            return false;
+        }
+    }
+
     template <typename Pred>
-    bool accessValue(Pred valuePred)
+    bool access(Pred valuePred)
     {
         QReadLocker locker(&m_contentLock);
 
@@ -168,18 +208,6 @@ public:
             return false;
 
         valuePred(*m_content.value);
-        return true;
-     }
-
-    template <typename Pred>
-    bool accessProgress(Pred progressPred)
-    {
-        QReadLocker locker(&m_contentLock);
-
-        if (m_state != ASYNC_VALUE_STATE::PROGRESS)
-            return false;
-
-        progressPred(*m_progress);
         return true;
      }
 
@@ -195,23 +223,94 @@ public:
         return true;
      }
 
+    template <typename Pred>
+    bool accessProgress(Pred progressPred)
+    {
+        QReadLocker locker(&m_contentLock);
+
+        if (m_state != ASYNC_VALUE_STATE::PROGRESS)
+            return false;
+
+        progressPred(*m_progress);
+        return true;
+     }
+
+    template <typename ValuePred, typename ErrorPred>
+    void wait(ValuePred valuePred, ErrorPred errorPred)
+    {
+        // easy case we have value or error
+        if (access(valuePred, errorPred))
+            return;
+
+        // lock async value
+        QMutexLocker writeLocker(&m_writeLock);
+        // check easy case again
+        if (access(valuePred, errorPred))
+            return;
+
+        // if we are the first waiters
+        // create Waiter on stack and assign it to m_waiter
+        // all subsequent waiters will use this one
+        if (!m_waiter)
+        {
+            Waiter theWaiter;
+
+            auto atExit = makeAtExitOp([&]{
+                if (m_waiter->subWaiters > 0)
+                {
+                    // wait for all sub waiters
+                    m_waiter->waitSubWaiters.wait(&m_writeLock);
+                    Q_ASSERT(m_waiter->subWaiters == 0);
+                }
+
+                // unregister self as main waiter
+                m_waiter = nullptr;
+            });
+
+            // register self as main waiter
+            m_waiter = &theWaiter;
+
+            // wait for value or error
+            m_waiter->waitValue.wait(&m_writeLock);
+            // process
+            auto res = access(valuePred, errorPred);
+            Q_ASSERT(res && "access should succeed");
+        }
+        else
+        {
+            auto atExit = makeAtExitOp([&]{
+                // unregister self as subwaiter
+                m_waiter->subWaiters -= 1;
+                // if no subwaiters -> notify main waiter to release
+                if (m_waiter->subWaiters == 0)
+                    m_waiter->waitSubWaiters.wakeAll();
+            });
+
+            // register self as subwaiter
+            m_waiter->subWaiters += 1;
+
+            // wait for value or error
+            m_waiter->waitValue.wait(&m_writeLock);
+            // process
+            auto res = access(valuePred, errorPred);
+            Q_ASSERT(res && "access should succeed");
+        }
+    }
+
+    void wait()
+    {
+        wait(AsyncNoOp(), AsyncNoOp());
+    }
+
+    void stopAndWait()
+    {
+        accessProgress([](ProgressType& progress){
+            progress.requestStop();
+        });
+        wait();
+    }
+
 private:
-    explicit AsyncValueTemplate(ASYNC_VALUE_STATE state, QObject* parent = nullptr)
-        : AsyncValueBase(parent),
-          m_writeLock(QMutex::Recursive),
-          m_contentLock(QReadWriteLock::Recursive),
-          m_state(state)
-    {
-    }
-
-    void emitStateChanged()
-    {
-        emit stateChanged(m_state);
-    }
-
-    QMutex m_writeLock;
-    QReadWriteLock m_contentLock;
-    ASYNC_VALUE_STATE m_state;
 
     struct Content
     {

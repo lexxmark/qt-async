@@ -14,29 +14,20 @@
    limitations under the License.
 */
 
-#ifndef ASYNC_WIDGET_PROXY_H
-#define ASYNC_WIDGET_PROXY_H
+#include "AsyncWidgetError.h"
 
-#include <QWidget>
-
-class AsyncWidgetProxy : public QWidget
+AsyncWidgetError::AsyncWidgetError(const AsyncError& error, QWidget* parent)
+    : QLabel(parent),
+      m_error(error)
 {
-    Q_OBJECT
-    Q_DISABLE_COPY(AsyncWidgetProxy)
+    setAutoFillBackground(true);
+    setFrameStyle(QFrame::Panel | QFrame::Plain);
+    setLineWidth(1);
+    setWordWrap(true);
+    auto _palette = palette();
+    _palette.setColor(QPalette::Normal, QPalette::Window, Qt::white);
+    setPalette(_palette);
+    setAlignment(Qt::AlignCenter);
 
-public:
-    using QWidget::QWidget;
-
-    QWidget* contentWidget() const { return m_content; }
-    void setContentWidget(QWidget* content);
-
-    static QWidget* createLabel(QString text, QWidget* parent);
-
-protected:
-    void resizeEvent(QResizeEvent *event) override;
-
-private:
-   QWidget* m_content = nullptr;
-};
-
-#endif // ASYNC_WIDGET_PROXY_H
+    setText(m_error.text());
+}

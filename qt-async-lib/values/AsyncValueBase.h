@@ -18,12 +18,15 @@
 #define ASYNC_VALUE_BASE_H
 
 #include <QObject>
+#include <QMutex>
+#include <QReadWriteLock>
+#include <QWaitCondition>
 
 enum class ASYNC_VALUE_STATE
 {
     VALUE,
-    PROGRESS,
-    ERROR
+    ERROR,
+    PROGRESS
 };
 Q_DECLARE_METATYPE(ASYNC_VALUE_STATE);
 
@@ -32,11 +35,51 @@ class AsyncValueBase : public QObject
     Q_OBJECT
     Q_DISABLE_COPY(AsyncValueBase)
 
-public:
-    AsyncValueBase(QObject* parent = nullptr);
-
 signals:
     void stateChanged(ASYNC_VALUE_STATE state);
+
+protected:
+    explicit AsyncValueBase(ASYNC_VALUE_STATE state, QObject* parent = nullptr);
+
+    void emitStateChanged()
+    {
+        emit stateChanged(m_state);
+    }
+
+    QMutex m_writeLock;
+    QReadWriteLock m_contentLock;
+    ASYNC_VALUE_STATE m_state;
+
+    struct Waiter
+    {
+        QWaitCondition waitValue;
+
+        quint16 subWaiters = 0;
+        QWaitCondition waitSubWaiters;
+    };
+    Waiter* m_waiter = nullptr;
+
+    template <typename AtExit>
+    struct AtExitOp
+    {
+        AtExitOp(AtExit atExit)
+            : atExit(std::move(atExit))
+        {
+        }
+
+        ~AtExitOp()
+        {
+            atExit();
+        }
+
+        AtExit atExit;
+    };
+
+    template <typename AtExit>
+    static inline auto makeAtExitOp(AtExit atExit)
+    {
+        return AtExitOp<AtExit>(std::move(atExit));
+    }
 };
 
 #endif // ASYNC_VALUE_BASE_H

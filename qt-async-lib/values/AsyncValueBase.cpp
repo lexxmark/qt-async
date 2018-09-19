@@ -19,8 +19,11 @@
 
 static auto async_value_state_type_id = qRegisterMetaType<ASYNC_VALUE_STATE>("ASYNC_VALUE_STATE");
 
-AsyncValueBase::AsyncValueBase(QObject *parent)
-    : QObject(parent)
+AsyncValueBase::AsyncValueBase(ASYNC_VALUE_STATE state, QObject* parent)
+    : QObject(parent),
+      m_writeLock(QMutex::NonRecursive),
+      m_contentLock(QReadWriteLock::NonRecursive),
+      m_state(state)
 {
 }
 

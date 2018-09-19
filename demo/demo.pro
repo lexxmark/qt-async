@@ -14,11 +14,13 @@ FORMS    += MainWindow.ui
 
 INCLUDEPATH += ../qt-async-lib
 
-CONFIG(debug, debug|release):LIBS += -L$$OUT_PWD/../qt-async-lib/debug -lqt-async-lib
-CONFIG(release, debug|release):LIBS += -L$$OUT_PWD/../qt-async-lib/release -lqt-async-lib
+CONFIG(debug, debug|release): ASYNC_LIB_PATH = $$OUT_PWD/../qt-async-lib/debug
+CONFIG(release, debug|release): ASYNC_LIB_PATH = $$OUT_PWD/../qt-async-lib/release
 
-#unix:PRE_TARGETDEPS += $$BIN_DIR/libQtnPropertyCore.a $$BIN_DIR/libQtnPropertyWidget.a
-#else:PRE_TARGETDEPS += $$BIN_DIR/QtnPropertyCore.lib  $$BIN_DIR/QtnPropertyWidget.lib
+LIBS += -L$$ASYNC_LIB_PATH -lqt-async-lib
+
+unix:PRE_TARGETDEPS += $$ASYNC_LIB_PATH/qt-async-lib.a
+else:PRE_TARGETDEPS += $$ASYNC_LIB_PATH/qt-async-lib.lib
 
 #win32 {
 #} else:unix {

@@ -10,7 +10,9 @@ QT       -= gui
 
 SOURCES += \
     values/AsyncValueBase.cpp \
-    widgets/AsyncWidgetProxy.cpp
+    widgets/AsyncWidgetProxy.cpp \
+    widgets/AsyncWidgetError.cpp \
+    widgets/AsyncWidgetProgress.cpp
 
 HEADERS += \
     values/AsyncValueBase.h \
@@ -21,6 +23,8 @@ HEADERS += \
     values/AsyncValueObtain.h \
     widgets/AsyncWidgetProxy.h \
     widgets/AsyncWidgetBase.h \
-    widgets/AsyncWidget.h
+    widgets/AsyncWidget.h \
+    widgets/AsyncWidgetError.h \
+    widgets/AsyncWidgetProgress.h
 	
 DEFINES += QT_DEPRECATED_WARNINGS

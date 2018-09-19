@@ -13,9 +13,13 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     move(QApplication::desktop()->availableGeometry().center() - rect().center());
 
-    auto valueWidget = QSharedPointer<AsyncWidget<QString>>::create(ui->widget);
-    ui->widget->setContentWidget(valueWidget);
+    auto valueWidget = new AsyncWidgetFn<QString>(ui->widget);
+    valueWidget->createValueWidget = [](QString& value, QWidget* parent) {
+        return AsyncWidgetProxy::createLabel(value, parent);
+    };
     valueWidget->setValue(&m_value);
+
+    ui->widget->setContentWidget(valueWidget);
 
     QObject::connect(&m_value, &AsyncQString::stateChanged, this, &MainWindow::OnAsyncValueChanged);
 }
@@ -23,6 +27,7 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+    m_value.stopAndWait();
 }
 
 void MainWindow::OnAsyncValueChanged(ASYNC_VALUE_STATE state)
@@ -44,12 +49,12 @@ void MainWindow::on_valueBttn_clicked()
 
 void MainWindow::on_startBttn_clicked()
 {
-    asyncValueObtain(QThreadPool::globalInstance(), m_value, [](AsyncProgress& progress, AsyncValue<QString>& value){
+    asyncValueObtain(m_value, [](AsyncProgress& progress, AsyncValue<QString>& value){
 
         using namespace std::chrono_literals;
         for (auto i : {0, 1, 2, 3, 4})
         {
-            progress.setProgress((float)i/4.f);
+            progress.setProgress((float)i/5.f);
             if (progress.isStopRequested())
             {
                 value.emplaceError("Stopped");
@@ -59,9 +64,13 @@ void MainWindow::on_startBttn_clicked()
             std::this_thread::sleep_for(1s);
         }
 
-        QString val = "Result";
+        progress.setProgress(1.f);
+        progress.setMessage("Processing...");
+        std::this_thread::sleep_for(1s);
+
+        QString val = "Loaded value is 42";
         value.emplaceValue(std::move(val));
-    }, "Loading...", true);
+    }, "Loading...", ASYNC_CAN_REQUEST_STOP::YES);
 }
 
 

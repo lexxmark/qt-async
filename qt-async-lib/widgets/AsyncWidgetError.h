@@ -14,29 +14,22 @@
    limitations under the License.
 */
 
-#ifndef ASYNC_WIDGET_PROXY_H
-#define ASYNC_WIDGET_PROXY_H
+#ifndef ASYNC_WIDGET_ERROR_H
+#define ASYNC_WIDGET_ERROR_H
 
-#include <QWidget>
+#include <QLabel>
+#include "values/AsyncError.h"
 
-class AsyncWidgetProxy : public QWidget
+class AsyncWidgetError : public QLabel
 {
     Q_OBJECT
-    Q_DISABLE_COPY(AsyncWidgetProxy)
+    Q_DISABLE_COPY(AsyncWidgetError)
 
 public:
-    using QWidget::QWidget;
-
-    QWidget* contentWidget() const { return m_content; }
-    void setContentWidget(QWidget* content);
-
-    static QWidget* createLabel(QString text, QWidget* parent);
-
-protected:
-    void resizeEvent(QResizeEvent *event) override;
+    explicit AsyncWidgetError(const AsyncError& error, QWidget* parent);
 
 private:
-   QWidget* m_content = nullptr;
+    const AsyncError& m_error;
 };
 
-#endif // ASYNC_WIDGET_PROXY_H
+#endif // ASYNC_WIDGET_ERROR_H

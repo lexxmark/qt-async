@@ -17,8 +17,11 @@
 #ifndef ASYNC_WIDGET_H
 #define ASYNC_WIDGET_H
 
+#include <functional>
 #include "values/AsyncValue.h"
 #include "AsyncWidgetBase.h"
+#include "AsyncWidgetError.h"
+#include "AsyncWidgetProgress.h"
 
 template <typename ValueType>
 class AsyncWidget : public AsyncWidgetBase<AsyncValue<ValueType>>
@@ -27,19 +30,55 @@ public:
     using AsyncWidgetBase<AsyncValue<ValueType>>::AsyncWidgetBase;
 
 protected:
-    QSharedPointer<QWidget> createValueWidgetImpl(ValueType& /*value*/, QWidget* parent) override
+    QWidget* createValueWidgetImpl(ValueType& /*value*/, QWidget* parent) override
     {
-        return createLabel("<value>", parent);
+        return createLabel("<value widget is not implemented>", parent);
     }
 
-    QSharedPointer<QWidget> createErrorWidgetImpl(AsyncError& error, QWidget* parent) override
+    QWidget* createErrorWidgetImpl(AsyncError& error, QWidget* parent) override
     {
-        return createLabel(error.text(), parent);
+        return new AsyncWidgetError(error, parent);
     }
 
-    QSharedPointer<QWidget> createProgressWidgetImpl(AsyncProgress& progress, QWidget* parent) override
+    QWidget* createProgressWidgetImpl(AsyncProgress& progress, QWidget* parent) override
     {
-        return createLabel(progress.message(), parent);
+        return new AsyncWidgetProgress(progress, parent);
+    }
+};
+
+template <typename ValueType>
+class AsyncWidgetFn : public AsyncWidget<ValueType>
+{
+public:
+    using AsyncWidget<ValueType>::AsyncWidget;
+
+    std::function<QWidget*(ValueType&, QWidget*)> createValueWidget;
+    std::function<QWidget*(AsyncError&, QWidget*)> createErrorWidget;
+    std::function<QWidget*(AsyncProgress&, QWidget*)> createProgressWidget;
+
+protected:
+    QWidget* createValueWidgetImpl(ValueType& value, QWidget* parent) override
+    {
+        if (createValueWidget)
+            return createValueWidget(value, parent);
+        else
+            return AsyncWidget<ValueType>::createValueWidgetImpl(value, parent);
+    }
+
+    QWidget* createErrorWidgetImpl(AsyncError& error, QWidget* parent) override
+    {
+        if (createErrorWidget)
+            return createErrorWidget(error, parent);
+        else
+            return AsyncWidget<ValueType>::createErrorWidgetImpl(error, parent);
+    }
+
+    QWidget* createProgressWidgetImpl(AsyncProgress& progress, QWidget* parent) override
+    {
+        if (createProgressWidget)
+            return createProgressWidget(progress, parent);
+        else
+            return AsyncWidget<ValueType>::createProgressWidgetImpl(progress, parent);
     }
 };
 

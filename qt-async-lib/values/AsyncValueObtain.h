@@ -20,17 +20,25 @@
 #include <QThreadPool>
 #include <QtConcurrent>
 
-template <typename AsyncValueType, typename Func, typename... Args>
-void asyncValueObtain(QThreadPool *pool, AsyncValueType& value, Func func, Args&& ...arguments)
+template <typename AsyncValueType, typename Func, typename... ProgressArgs>
+bool asyncValueObtain(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
-    auto progress = value.startProgressEmplace(std::forward<Args>(arguments)...);
+    auto progress = value.startProgressEmplace(std::forward<ProgressArgs>(progressArgs)...);
     if (!progress)
-        return;
+        return false;
 
-    QtConcurrent::run(pool, [&value, progress = progress, func = std::move(func)](){
+    QtConcurrent::run(pool, [&value, progress = progress, func = std::forward<Func>(func)](){
         func(*progress, value);
         value.stopProgress(progress);
     });
+
+    return true;
+}
+
+template <typename AsyncValueType, typename Func, typename... ProgressArgs>
+bool asyncValueObtain(AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
+{
+    return asyncValueObtain(QThreadPool::globalInstance(), value, std::forward<Func>(func), std::forward<ProgressArgs>(progressArgs)...);
 }
 
 #endif // ASYNC_VALUE_OBTAIN_H

@@ -46,10 +46,10 @@ protected:
     using ErrorType = typename AsyncValueType::ErrorType;
     using ProgressType = typename AsyncValueType::ProgressType;
 
-    virtual QSharedPointer<QWidget> createValueWidgetImpl(ValueType& value, QWidget* parent) = 0;
-    virtual QSharedPointer<QWidget> createErrorWidgetImpl(ErrorType& error, QWidget* parent) = 0;
-    virtual QSharedPointer<QWidget> createProgressWidgetImpl(ProgressType& progress, QWidget* parent) = 0;
-    virtual QSharedPointer<QWidget> createNoAsyncValueWidgetImpl(QWidget* parent) { return createLabel("<no value>", parent); }
+    virtual QWidget* createValueWidgetImpl(ValueType& value, QWidget* parent) = 0;
+    virtual QWidget* createErrorWidgetImpl(ErrorType& error, QWidget* parent) = 0;
+    virtual QWidget* createProgressWidgetImpl(ProgressType& progress, QWidget* parent) = 0;
+    virtual QWidget* createNoAsyncValueWidgetImpl(QWidget* parent) { return createLabel("<no value>", parent); }
 
 private:
     void onValueStateChanged(ASYNC_VALUE_STATE /*state*/)
@@ -65,7 +65,7 @@ private:
             return;
         }
 
-        QSharedPointer<QWidget> newWidget;
+        QWidget* newWidget = nullptr;
 
         m_asyncValue->access([&newWidget, this](ValueType& value){
             newWidget = createValueWidgetImpl(value, this);
