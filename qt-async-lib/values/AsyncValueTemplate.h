@@ -56,6 +56,10 @@ public:
 
     void moveValue(std::unique_ptr<ValueType> value)
     {
+#if defined(ASYNC_TRACK_DEADLOCK)
+        Q_ASSERT(m_emitThread != QThread::currentThread() && "Changing async value from emitted state changed signal is forbidden. Deadlock will happen.");
+#endif
+
         Content oldContent;
 
         QMutexLocker writeLocker(&m_writeLock);
@@ -89,6 +93,10 @@ public:
 
     void moveError(std::unique_ptr<ErrorType> error)
     {
+#if defined(ASYNC_TRACK_DEADLOCK)
+        Q_ASSERT(m_emitThread != QThread::currentThread() && "Changing async value from emitted state changed signal is forbidden. Deadlock will happen.");
+#endif
+
         Content oldContent;
 
         QMutexLocker writeLocker(&m_writeLock);
@@ -115,6 +123,10 @@ public:
 
     ProgressType* startProgressMove(std::unique_ptr<ProgressType> progress)
     {
+#if defined(ASYNC_TRACK_DEADLOCK)
+        Q_ASSERT(m_emitThread != QThread::currentThread() && "Changing async value from emitted state changed signal is forbidden. Deadlock will happen.");
+#endif
+
         Content oldContent;
 
         QMutexLocker writeLocker(&m_writeLock);

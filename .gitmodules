@@ -1,0 +1,3 @@
+[submodule "qt-async-lib/widgets/QtWaitingSpinner"]
+	path = qt-async-lib/widgets/QtWaitingSpinner
+	url = https://github.com/lexxmark/QtWaitingSpinner.git

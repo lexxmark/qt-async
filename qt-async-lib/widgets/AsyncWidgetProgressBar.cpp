@@ -14,7 +14,8 @@
    limitations under the License.
 */
 
-#include "AsyncWidgetProgress.h"
+#include "AsyncWidgetProgressBar.h"
+#include "../Config.h"
 #include <QLabel>
 #include <QProgressBar>
 #include <QPushButton>
@@ -23,17 +24,10 @@
 #include <QTimer>
 #include <QTimeLine>
 
-AsyncWidgetProgress::AsyncWidgetProgress(AsyncProgress& progress, QWidget* parent)
+AsyncWidgetProgressBar::AsyncWidgetProgressBar(AsyncProgress& progress, QWidget* parent)
     : QFrame(parent),
       m_progress(progress)
 {
-    setAutoFillBackground(true);
-    setFrameStyle(QFrame::Panel | QFrame::Plain);
-    setLineWidth(1);
-    auto _palette = palette();
-    _palette.setColor(QPalette::Normal, QPalette::Window, Qt::white);
-    setPalette(_palette);
-
     auto layout = new QVBoxLayout(this);
     layout->setSpacing(6);
     layout->setContentsMargins(11, 11, 11, 11);
@@ -72,7 +66,7 @@ AsyncWidgetProgress::AsyncWidgetProgress(AsyncProgress& progress, QWidget* paren
                 m_stop = new QPushButton(this);
                 m_stop->setText("Stop");
                 subLayout->addWidget(m_stop);
-                QObject::connect(m_stop, &QPushButton::clicked, this, &AsyncWidgetProgress::onStopClicked);
+                QObject::connect(m_stop, &QPushButton::clicked, this, &AsyncWidgetProgressBar::onStopClicked);
             }
 
             layout->addLayout(subLayout);
@@ -86,18 +80,18 @@ AsyncWidgetProgress::AsyncWidgetProgress(AsyncProgress& progress, QWidget* paren
     }
 
     auto timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &AsyncWidgetProgress::update);
-    timer->start(200);
+    connect(timer, &QTimer::timeout, this, &AsyncWidgetProgressBar::updateContent);
+    timer->start(ASYNC_PROGRESS_WIDGET_UPDATE_TIMEOUT);
 
-    update();
+    updateContent();
 }
 
-void AsyncWidgetProgress::onStopClicked(bool /*checked*/)
+void AsyncWidgetProgressBar::onStopClicked(bool /*checked*/)
 {
     m_progress.requestStop();
 }
 
-void AsyncWidgetProgress::update()
+void AsyncWidgetProgressBar::updateContent()
 {
     if (m_progress.isStopRequested())
         m_message->setText(m_progress.message()+"(Stopping...)");

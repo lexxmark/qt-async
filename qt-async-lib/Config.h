@@ -14,13 +14,13 @@
    limitations under the License.
 */
 
-#include "AsyncWidgetError.h"
+#ifndef ASYNC_CONFIG_H
+#define ASYNC_CONFIG_H
 
-AsyncWidgetError::AsyncWidgetError(const AsyncError& error, QWidget* parent)
-    : QLabel(parent),
-      m_error(error)
-{
-    setWordWrap(true);
-    setAlignment(Qt::AlignCenter);
-    setText(m_error.text());
-}
+#if !defined(QT_NO_DEBUG)
+    #define ASYNC_TRACK_DEADLOCK
+#endif
+
+#define ASYNC_PROGRESS_WIDGET_UPDATE_TIMEOUT 200
+
+#endif // ASYNC_CONFIG_H

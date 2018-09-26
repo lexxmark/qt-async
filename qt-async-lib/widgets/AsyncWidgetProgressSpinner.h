@@ -14,13 +14,28 @@
    limitations under the License.
 */
 
-#include "AsyncWidgetError.h"
+#ifndef ASYNC_WIDGET_PROGRESS_SPINNER_H
+#define ASYNC_WIDGET_PROGRESS_SPINNER_H
 
-AsyncWidgetError::AsyncWidgetError(const AsyncError& error, QWidget* parent)
-    : QLabel(parent),
-      m_error(error)
+#include <QFrame>
+#include "values/AsyncProgress.h"
+
+class WaitingSpinnerWidget;
+
+class AsyncWidgetProgressSpinner : public QFrame
 {
-    setWordWrap(true);
-    setAlignment(Qt::AlignCenter);
-    setText(m_error.text());
-}
+    Q_OBJECT
+    Q_DISABLE_COPY(AsyncWidgetProgressSpinner)
+
+public:
+    explicit AsyncWidgetProgressSpinner(AsyncProgress& progress, QWidget* parent);
+
+private:
+    void updateContent();
+
+    AsyncProgress& m_progress;
+
+    WaitingSpinnerWidget* m_spinner = nullptr;
+};
+
+#endif // ASYNC_WIDGET_PROGRESS_SPINNER_H

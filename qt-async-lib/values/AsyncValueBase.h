@@ -21,6 +21,7 @@
 #include <QMutex>
 #include <QReadWriteLock>
 #include <QWaitCondition>
+#include <QThread>
 
 enum class ASYNC_VALUE_STATE
 {
@@ -43,6 +44,14 @@ protected:
 
     void emitStateChanged()
     {
+#if defined(ASYNC_TRACK_DEADLOCK)
+        Q_ASSERT(!m_emitThread && "This function is not reenterant");
+        m_emitThread = QThread::currentThread();
+        auto atExit = makeAtExitOp([this]{
+            m_emitThread = nullptr;
+        });
+#endif
+
         emit stateChanged(m_state);
     }
 
@@ -58,6 +67,10 @@ protected:
         QWaitCondition waitSubWaiters;
     };
     Waiter* m_waiter = nullptr;
+
+#if defined(ASYNC_TRACK_DEADLOCK)
+    QThread* m_emitThread = nullptr;
+#endif
 
     template <typename AtExit>
     struct AtExitOp

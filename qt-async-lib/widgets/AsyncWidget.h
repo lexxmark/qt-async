@@ -21,7 +21,7 @@
 #include "values/AsyncValue.h"
 #include "AsyncWidgetBase.h"
 #include "AsyncWidgetError.h"
-#include "AsyncWidgetProgress.h"
+#include "AsyncWidgetProgressBar.h"
 
 template <typename ValueType>
 class AsyncWidget : public AsyncWidgetBase<AsyncValue<ValueType>>
@@ -42,7 +42,7 @@ protected:
 
     QWidget* createProgressWidgetImpl(AsyncProgress& progress, QWidget* parent) override
     {
-        return new AsyncWidgetProgress(progress, parent);
+        return new AsyncWidgetProgressBar(progress, parent);
     }
 };
 

@@ -3,7 +3,9 @@
 #include <QDesktopWidget>
 #include <thread>
 #include "widgets/AsyncWidget.h"
+#include "widgets/AsyncWidgetProgressSpinner.h"
 #include "values/AsyncValueObtain.h"
+#include "widgets/QtWaitingSpinner/waitingspinnerwidget.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -14,9 +16,21 @@ MainWindow::MainWindow(QWidget *parent) :
     move(QApplication::desktop()->availableGeometry().center() - rect().center());
 
     auto valueWidget = new AsyncWidgetFn<QString>(ui->widget);
+
     valueWidget->createValueWidget = [](QString& value, QWidget* parent) {
         return AsyncWidgetProxy::createLabel(value, parent);
     };
+
+    valueWidget->createProgressWidget = [this](AsyncProgress& progress, QWidget* parent)->QWidget* {
+        switch (m_progressWidgetMode) {
+        case PROGRESS_MODE::SPINNER_LINES:
+            return new AsyncWidgetProgressSpinner(progress, parent);
+
+        default:
+            return new AsyncWidgetProgressBar(progress, parent);
+        }
+    };
+
     valueWidget->setValue(&m_value);
 
     ui->widget->setContentWidget(valueWidget);
@@ -70,6 +84,7 @@ void MainWindow::on_startBttn_clicked()
 
         QString val = "Loaded value is 42";
         value.emplaceValue(std::move(val));
+
     }, "Loading...", ASYNC_CAN_REQUEST_STOP::YES);
 }
 
@@ -79,4 +94,14 @@ void MainWindow::on_stopBttn_clicked()
     m_value.accessProgress([](AsyncProgress& progress){
         progress.requestStop();
     });
+}
+
+void MainWindow::on_radioButtonProgressBar_clicked()
+{
+    m_progressWidgetMode = PROGRESS_MODE::PROGRESS_BAR;
+}
+
+void MainWindow::on_radioButtonSpinnerLines_clicked()
+{
+    m_progressWidgetMode = PROGRESS_MODE::SPINNER_LINES;
 }

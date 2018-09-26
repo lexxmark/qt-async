@@ -51,15 +51,9 @@ void AsyncWidgetProxy::resizeEvent(QResizeEvent *event)
 QWidget* AsyncWidgetProxy::createLabel(QString text, QWidget* parent)
 {
     auto label = new QLabel(text, parent);
-    label->setAutoFillBackground(true);
-    label->setFrameStyle(QFrame::Panel | QFrame::Plain);
-    label->setLineWidth(1);
+    label->setObjectName("AsyncLabel");
     label->setWordWrap(true);
-    auto _palette = label->palette();
-    _palette.setColor(QPalette::Normal, QPalette::Window, Qt::white);
-    label->setPalette(_palette);
     label->setAlignment(Qt::AlignCenter);
-
     return label;
 }
 

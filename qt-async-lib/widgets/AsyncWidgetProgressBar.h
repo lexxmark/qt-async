@@ -14,8 +14,8 @@
    limitations under the License.
 */
 
-#ifndef ASYNC_WIDGET_PROGRESS_H
-#define ASYNC_WIDGET_PROGRESS_H
+#ifndef ASYNC_WIDGET_PROGRESS_BAR_H
+#define ASYNC_WIDGET_PROGRESS_BAR_H
 
 #include <QFrame>
 #include "values/AsyncProgress.h"
@@ -25,19 +25,19 @@ class QProgressBar;
 class QPushButton;
 class QTimeLine;
 
-class AsyncWidgetProgress : public QFrame
+class AsyncWidgetProgressBar : public QFrame
 {
     Q_OBJECT
-    Q_DISABLE_COPY(AsyncWidgetProgress)
+    Q_DISABLE_COPY(AsyncWidgetProgressBar)
 
 public:
-    explicit AsyncWidgetProgress(AsyncProgress& progress, QWidget* parent);
+    explicit AsyncWidgetProgressBar(AsyncProgress& progress, QWidget* parent);
 
 private slots:
     void onStopClicked(bool checked);
 
 private:
-    void update();
+    void updateContent();
 
     AsyncProgress& m_progress;
 
@@ -47,4 +47,4 @@ private:
     QTimeLine* m_progressBarTimeLine = nullptr;
 };
 
-#endif // ASYNC_WIDGET_PROGRESS_H
+#endif // ASYNC_WIDGET_PROGRESS_BAR_H
