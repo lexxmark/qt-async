@@ -17,10 +17,27 @@
 #ifndef ASYNC_CONFIG_H
 #define ASYNC_CONFIG_H
 
-#if !defined(QT_NO_DEBUG)
-    #define ASYNC_TRACK_DEADLOCK
-#endif
+#include <stdexcept>
 
 #define ASYNC_PROGRESS_WIDGET_UPDATE_TIMEOUT 200
+
+#define ASYNC_TRACK_DEADLOCK_AS_EXCEPTION
+
+#ifdef ASYNC_TRACK_DEADLOCK_AS_ASSERT
+    #define ASYNC_TRACK_DEADLOCK(condition) Q_ASSERT(condition)
+#elif defined(ASYNC_TRACK_DEADLOCK_AS_EXCEPTION)
+    #define ASYNC_TRACK_DEADLOCK(condition) async_impl::CheckDeadlock(condition)
+#else
+    #define ASYNC_TRACK_DEADLOCK(condition) /* no op */
+#endif
+
+namespace async_impl
+{
+    inline void CheckDeadlock(bool notDeadlock)
+    {
+        if (!notDeadlock)
+            throw std::logic_error("Deadlock");
+    }
+}
 
 #endif // ASYNC_CONFIG_H

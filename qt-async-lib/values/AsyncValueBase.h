@@ -17,6 +17,7 @@
 #ifndef ASYNC_VALUE_BASE_H
 #define ASYNC_VALUE_BASE_H
 
+#include "../Config.h"
 #include <QObject>
 #include <QMutex>
 #include <QReadWriteLock>

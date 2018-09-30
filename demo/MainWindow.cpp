@@ -4,7 +4,7 @@
 #include <thread>
 #include "widgets/AsyncWidget.h"
 #include "widgets/AsyncWidgetProgressSpinner.h"
-#include "values/AsyncValueObtain.h"
+#include "values/AsyncValueRun.h"
 #include "widgets/QtWaitingSpinner/waitingspinnerwidget.h"
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -63,7 +63,7 @@ void MainWindow::on_valueBttn_clicked()
 
 void MainWindow::on_startBttn_clicked()
 {
-    asyncValueObtain(m_value, [](AsyncProgress& progress, AsyncValue<QString>& value){
+    asyncValueRun(m_value, [](AsyncProgress& progress, AsyncValue<QString>& value){
 
         using namespace std::chrono_literals;
         for (auto i : {0, 1, 2, 3, 4})

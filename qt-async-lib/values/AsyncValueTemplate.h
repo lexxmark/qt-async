@@ -43,6 +43,13 @@ public:
         emplaceValue(std::forward<Args>(arguments)...);
     }
 
+    template <typename... Args>
+    explicit AsyncValueTemplate(AsyncInitByValue, Args&& ...arguments)
+        : AsyncValueBase(ASYNC_VALUE_STATE::VALUE, nullptr)
+    {
+        emplaceValue(std::forward<Args>(arguments)...);
+    }
+
     ~AsyncValueTemplate()
     {
         Q_ASSERT(m_state != ASYNC_VALUE_STATE::PROGRESS);
@@ -57,7 +64,8 @@ public:
     void moveValue(std::unique_ptr<ValueType> value)
     {
 #if defined(ASYNC_TRACK_DEADLOCK)
-        Q_ASSERT(m_emitThread != QThread::currentThread() && "Changing async value from emitted state changed signal is forbidden. Deadlock will happen.");
+        // Changing async value from emitStateChanged is forbidden. Deadlock will happen.
+        ASYNC_TRACK_DEADLOCK(m_emitThread != QThread::currentThread());
 #endif
 
         Content oldContent;
@@ -86,6 +94,13 @@ public:
     }
 
     template <typename... Args>
+    explicit AsyncValueTemplate(AsyncInitByError, Args&& ...arguments)
+        : AsyncValueBase(ASYNC_VALUE_STATE::ERROR, nullptr)
+    {
+        emplaceError(std::forward<Args>(arguments)...);
+    }
+
+    template <typename... Args>
     void emplaceError(Args&& ...arguments)
     {
         moveError(std::make_unique<ErrorType>(std::forward<Args>(arguments)...));
@@ -94,7 +109,8 @@ public:
     void moveError(std::unique_ptr<ErrorType> error)
     {
 #if defined(ASYNC_TRACK_DEADLOCK)
-        Q_ASSERT(m_emitThread != QThread::currentThread() && "Changing async value from emitted state changed signal is forbidden. Deadlock will happen.");
+        // Changing async value from emitStateChanged is forbidden. Deadlock will happen.
+        ASYNC_TRACK_DEADLOCK(m_emitThread != QThread::currentThread());
 #endif
 
         Content oldContent;
@@ -115,17 +131,13 @@ public:
             m_waiter->waitValue.wakeAll();
     }
 
-    template <typename... Args>
-    ProgressType* startProgressEmplace(Args&& ...arguments)
-    {
-        return startProgressMove(std::make_unique<ProgressType>(std::forward<Args>(arguments)...));
-    }
-
-    ProgressType* startProgressMove(std::unique_ptr<ProgressType> progress)
+    bool startProgress(ProgressType* progress)
     {
 #if defined(ASYNC_TRACK_DEADLOCK)
-        Q_ASSERT(m_emitThread != QThread::currentThread() && "Changing async value from emitted state changed signal is forbidden. Deadlock will happen.");
+        // Changing async value from emitStateChanged is forbidden. Deadlock will happen.
+        ASYNC_TRACK_DEADLOCK(m_emitThread != QThread::currentThread());
 #endif
+        Q_ASSERT(progress);
 
         Content oldContent;
 
@@ -134,7 +146,7 @@ public:
         if (m_state == ASYNC_VALUE_STATE::PROGRESS)
         {
             Q_ASSERT(false && "Cannot start progress while in progress");
-            return nullptr;
+            return false;
         }
 
         {
@@ -142,27 +154,35 @@ public:
 
             oldContent = std::move(m_content);
             m_progress = std::move(progress);
+            Q_ASSERT(!m_progress->isInUse() && "Progress is used already");
+            m_progress->setInUse(true);
             m_state = ASYNC_VALUE_STATE::PROGRESS;
         }
 
         emitStateChanged();
 
-        return m_progress.get();
+        return true;
     }
 
-    bool stopProgress(ProgressType* progress = nullptr)
+    bool stopProgress(ProgressType* progress)
     {
+        Q_ASSERT(progress);
+
         QMutexLocker writeLocker(&m_writeLock);
 
-        if (progress && (progress != m_progress.get()))
+        Q_ASSERT(progress->isInUse() && "Progress should be used");
+        progress->setInUse(false);
+
+
+        if (progress != m_progress)
         {
-            Q_ASSERT(false && "Progress was started with different progress instance");
+            // someone has started another progress -> ignore this stopProgress
             return false;
         }
 
         if (m_state == ASYNC_VALUE_STATE::PROGRESS)
         {
-            Q_ASSERT(false && "No value or error assigned");
+            Q_ASSERT(false && "No value or error assigned so cannot stop progress");
             return false;
         }
 
@@ -222,6 +242,12 @@ public:
         valuePred(*m_content.value);
         return true;
      }
+
+    template <typename Pred>
+    bool accessValue(Pred valuePred)
+    {
+        return access(valuePred);
+    }
 
     template <typename Pred>
     bool accessError(Pred errorPred)
@@ -286,7 +312,7 @@ public:
             m_waiter->waitValue.wait(&m_writeLock);
             // process
             auto res = access(valuePred, errorPred);
-            Q_ASSERT(res && "access should succeed");
+            Q_ASSERT(res && "access should succeeded");
         }
         else
         {
@@ -331,7 +357,7 @@ private:
     };
     Content m_content;
 
-    std::unique_ptr<ProgressType> m_progress;
+    ProgressType* m_progress = nullptr;
 };
 
 #endif // ASYNC_VALUE_TEMPLATE_H

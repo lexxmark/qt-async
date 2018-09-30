@@ -21,24 +21,25 @@
 #include <QtConcurrent>
 
 template <typename AsyncValueType, typename Func, typename... ProgressArgs>
-bool asyncValueObtain(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
+bool asyncValueRun(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
-    auto progress = value.startProgressEmplace(std::forward<ProgressArgs>(progressArgs)...);
-    if (!progress)
+    auto progress = std::make_unique<typename AsyncValueType::ProgressType>(std::forward<ProgressArgs>(progressArgs)...);
+    if (!value.startProgress(progress.get()))
         return false;
 
-    QtConcurrent::run(pool, [&value, progress = progress, func = std::forward<Func>(func)](){
+    QtConcurrent::run(pool, [&value, progressPtr = progress.release(), func = std::forward<Func>(func)](){
+        std::unique_ptr<typename AsyncValueType::ProgressType> progress(progressPtr);
         func(*progress, value);
-        value.stopProgress(progress);
+        value.stopProgress(progress.get());
     });
 
     return true;
 }
 
 template <typename AsyncValueType, typename Func, typename... ProgressArgs>
-bool asyncValueObtain(AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
+bool asyncValueRun(AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
-    return asyncValueObtain(QThreadPool::globalInstance(), value, std::forward<Func>(func), std::forward<ProgressArgs>(progressArgs)...);
+    return asyncValueRun(QThreadPool::globalInstance(), value, std::forward<Func>(func), std::forward<ProgressArgs>(progressArgs)...);
 }
 
 #endif // ASYNC_VALUE_OBTAIN_H

@@ -22,7 +22,6 @@ HEADERS += \
     values/AsyncError.h \
     values/AsyncProgress.h \
     values/AsyncValue.h \
-    values/AsyncValueObtain.h \
     widgets/AsyncWidgetProxy.h \
     widgets/AsyncWidgetBase.h \
     widgets/AsyncWidget.h \
@@ -30,6 +29,7 @@ HEADERS += \
     widgets/QtWaitingSpinner/waitingspinnerwidget.h \
     Config.h \
     widgets/AsyncWidgetProgressBar.h \
-    widgets/AsyncWidgetProgressSpinner.h
+    widgets/AsyncWidgetProgressSpinner.h \
+    values/AsyncValueRun.h
 	
 DEFINES += QT_DEPRECATED_WARNINGS

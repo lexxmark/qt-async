@@ -1,4 +1,5 @@
-QT += core testlib
+QT += core  concurrent testlib
+QT -= gui
 
 TARGET = qt-async-tests
 

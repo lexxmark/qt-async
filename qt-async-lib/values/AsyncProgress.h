@@ -35,6 +35,11 @@ public:
           m_canRequestStop(canRequestStop)
     {}
 
+    ~AsyncProgress()
+    {
+        Q_ASSERT(!m_isInUse && "Progress is still used.");
+    }
+
     QString message() const { return m_message; }
     float progress() const { return m_progress; }
     bool canRequestStop() const { return m_canRequestStop == ASYNC_CAN_REQUEST_STOP::YES; }
@@ -44,11 +49,15 @@ public:
     void setProgress(float progress) { m_progress = progress; }
     void requestStop() { m_isStopRequested = true; }
 
+    bool isInUse() const { return m_isInUse; }
+    void setInUse(bool inUse) { m_isInUse = inUse; }
+
 private:
     QString m_message;
     float m_progress = 0.f;
     ASYNC_CAN_REQUEST_STOP m_canRequestStop = ASYNC_CAN_REQUEST_STOP::YES;
     bool m_isStopRequested = false;
+    bool m_isInUse = false;
 };
 
 #endif // ASYNC_PROGRESS_H
