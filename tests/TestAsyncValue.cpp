@@ -26,11 +26,11 @@ void TestAsyncValue::simple()
 
     // init by error
     {
-        AsyncValue<int> value(AsyncInitByError(), QString("no value"));
+        AsyncValue<int> value(AsyncInitByError(), "no value");
 
         {
             auto res = value.accessError([](const AsyncError& error){
-                QCOMPARE(error.text(), "no value");
+                QCOMPARE(error.text(), QString("no value"));
             });
             QVERIFY(res);
 
