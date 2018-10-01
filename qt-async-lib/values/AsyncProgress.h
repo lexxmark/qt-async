@@ -47,6 +47,8 @@ public:
 
     void setMessage(QString message) { m_message = std::move(message); }
     void setProgress(float progress) { m_progress = progress; }
+    template <typename Num>
+    void setProgress(Num current, Num total) { setProgress(static_cast<float>(current) / static_cast<float>(total)); }
     void requestStop() { m_isStopRequested = true; }
 
     bool isInUse() const { return m_isInUse; }

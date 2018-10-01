@@ -16,8 +16,8 @@
 
 #include "AsyncWidgetProgressSpinner.h"
 #include "../Config.h"
+#include "../third_party/QtWaitingSpinner/waitingspinnerwidget.h"
 #include <QTimer>
-#include "QtWaitingSpinner/waitingspinnerwidget.h"
 
 AsyncWidgetProgressSpinner::AsyncWidgetProgressSpinner(AsyncProgress& progress, QWidget* parent)
     : QFrame(parent),

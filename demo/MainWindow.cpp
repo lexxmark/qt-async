@@ -5,7 +5,6 @@
 #include "widgets/AsyncWidget.h"
 #include "widgets/AsyncWidgetProgressSpinner.h"
 #include "values/AsyncValueRun.h"
-#include "widgets/QtWaitingSpinner/waitingspinnerwidget.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -68,7 +67,7 @@ void MainWindow::on_startBttn_clicked()
         using namespace std::chrono_literals;
         for (auto i : {0, 1, 2, 3, 4})
         {
-            progress.setProgress((float)i/5.f);
+            progress.setProgress(i, 5);
             if (progress.isStopRequested())
             {
                 value.emplaceError("Stopped");

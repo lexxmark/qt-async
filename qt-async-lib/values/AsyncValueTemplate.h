@@ -17,6 +17,7 @@
 #ifndef ASYNC_VALUE_TEMPLATE_H
 #define ASYNC_VALUE_TEMPLATE_H
 
+#include <memory>
 #include "AsyncValueBase.h"
 
 struct AsyncNoOp
@@ -293,7 +294,7 @@ public:
         {
             Waiter theWaiter;
 
-            auto atExit = makeAtExitOp([&]{
+            SCOPE_EXIT {
                 if (m_waiter->subWaiters > 0)
                 {
                     // wait for all sub waiters
@@ -303,7 +304,7 @@ public:
 
                 // unregister self as main waiter
                 m_waiter = nullptr;
-            });
+            };
 
             // register self as main waiter
             m_waiter = &theWaiter;
@@ -316,13 +317,13 @@ public:
         }
         else
         {
-            auto atExit = makeAtExitOp([&]{
+            SCOPE_EXIT {
                 // unregister self as subwaiter
                 m_waiter->subWaiters -= 1;
                 // if no subwaiters -> notify main waiter to release
                 if (m_waiter->subWaiters == 0)
                     m_waiter->waitSubWaiters.wakeAll();
-            });
+            };
 
             // register self as subwaiter
             m_waiter->subWaiters += 1;

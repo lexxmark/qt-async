@@ -32,7 +32,7 @@ public:
 protected:
     QWidget* createValueWidgetImpl(ValueType& /*value*/, QWidget* parent) override
     {
-        return createLabel("<value widget is not implemented>", parent);
+        return this->createLabel("<value widget is not implemented>", parent);
     }
 
     QWidget* createErrorWidgetImpl(AsyncError& error, QWidget* parent) override

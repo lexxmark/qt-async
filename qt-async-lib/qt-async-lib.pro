@@ -12,7 +12,7 @@ SOURCES += \
     values/AsyncValueBase.cpp \
     widgets/AsyncWidgetProxy.cpp \
     widgets/AsyncWidgetError.cpp \
-    widgets/QtWaitingSpinner/waitingspinnerwidget.cpp \
+    third_party/QtWaitingSpinner/waitingspinnerwidget.cpp \
     widgets/AsyncWidgetProgressBar.cpp \
     widgets/AsyncWidgetProgressSpinner.cpp
 
@@ -26,10 +26,11 @@ HEADERS += \
     widgets/AsyncWidgetBase.h \
     widgets/AsyncWidget.h \
     widgets/AsyncWidgetError.h \
-    widgets/QtWaitingSpinner/waitingspinnerwidget.h \
+    third_party/QtWaitingSpinner/waitingspinnerwidget.h \
     Config.h \
     widgets/AsyncWidgetProgressBar.h \
     widgets/AsyncWidgetProgressSpinner.h \
-    values/AsyncValueRun.h
+    values/AsyncValueRun.h \
+    third_party/scope_exit.h
 	
 DEFINES += QT_DEPRECATED_WARNINGS

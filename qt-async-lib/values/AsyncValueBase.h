@@ -18,6 +18,7 @@
 #define ASYNC_VALUE_BASE_H
 
 #include "../Config.h"
+#include "../third_party/scope_exit.h"
 #include <QObject>
 #include <QMutex>
 #include <QReadWriteLock>
@@ -48,9 +49,9 @@ protected:
 #if defined(ASYNC_TRACK_DEADLOCK)
         Q_ASSERT(!m_emitThread && "This function is not reenterant");
         m_emitThread = QThread::currentThread();
-        auto atExit = makeAtExitOp([this]{
+        SCOPE_EXIT {
             m_emitThread = nullptr;
-        });
+        };
 #endif
 
         emit stateChanged(m_state);
@@ -72,28 +73,6 @@ protected:
 #if defined(ASYNC_TRACK_DEADLOCK)
     QThread* m_emitThread = nullptr;
 #endif
-
-    template <typename AtExit>
-    struct AtExitOp
-    {
-        AtExitOp(AtExit atExit)
-            : atExit(std::move(atExit))
-        {
-        }
-
-        ~AtExitOp()
-        {
-            atExit();
-        }
-
-        AtExit atExit;
-    };
-
-    template <typename AtExit>
-    static inline auto makeAtExitOp(AtExit atExit)
-    {
-        return AtExitOp<AtExit>(std::move(atExit));
-    }
 };
 
 #endif // ASYNC_VALUE_BASE_H
