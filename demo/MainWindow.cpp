@@ -4,7 +4,7 @@
 #include <thread>
 #include "widgets/AsyncWidget.h"
 #include "widgets/AsyncWidgetProgressSpinner.h"
-#include "values/AsyncValueRun.h"
+#include "values/AsyncValueRunThreadPool.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -62,7 +62,7 @@ void MainWindow::on_valueBttn_clicked()
 
 void MainWindow::on_startBttn_clicked()
 {
-    asyncValueRun(m_value, [](AsyncProgress& progress, AsyncValue<QString>& value){
+    asyncValueRunThreadPool(m_value, [](AsyncProgress& progress, AsyncValue<QString>& value){
 
         using namespace std::chrono_literals;
         for (auto i : {0, 1, 2, 3, 4})

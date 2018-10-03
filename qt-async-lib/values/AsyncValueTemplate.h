@@ -19,6 +19,7 @@
 
 #include <memory>
 #include "AsyncValueBase.h"
+#include "AsyncTrackErrorsPolicy.h"
 
 struct AsyncNoOp
 {
@@ -29,7 +30,8 @@ struct AsyncNoOp
 struct AsyncInitByValue {};
 struct AsyncInitByError {};
 
-template <typename ValueType_t, typename ErrorType_t, typename ProgressType_t>
+
+template <typename ValueType_t, typename ErrorType_t, typename ProgressType_t, typename TrackErrorsPolicy_t = AsyncTrackErrorsPolicyDefault>
 class AsyncValueTemplate : public AsyncValueBase
 {
 public:
@@ -53,7 +55,8 @@ public:
 
     ~AsyncValueTemplate()
     {
-        Q_ASSERT(m_state != ASYNC_VALUE_STATE::PROGRESS);
+        if (m_state == ASYNC_VALUE_STATE::PROGRESS)
+            m_trackErrors.inProgressWhileDestruct();
     }
 
     template <typename... Args>
@@ -64,10 +67,7 @@ public:
 
     void moveValue(std::unique_ptr<ValueType> value)
     {
-#if defined(ASYNC_TRACK_DEADLOCK)
-        // Changing async value from emitStateChanged is forbidden. Deadlock will happen.
-        ASYNC_TRACK_DEADLOCK(m_emitThread != QThread::currentThread());
-#endif
+        m_trackErrors.trackEmitDeadlock();
 
         Content oldContent;
 
@@ -77,6 +77,11 @@ public:
 
             oldContent = std::move(m_content);
             m_content.value = std::move(value);
+
+            // don't change state until stopProgress happen
+            if (m_state == ASYNC_VALUE_STATE::PROGRESS)
+                return;
+
             m_state = ASYNC_VALUE_STATE::VALUE;
         }
 
@@ -109,10 +114,7 @@ public:
 
     void moveError(std::unique_ptr<ErrorType> error)
     {
-#if defined(ASYNC_TRACK_DEADLOCK)
-        // Changing async value from emitStateChanged is forbidden. Deadlock will happen.
-        ASYNC_TRACK_DEADLOCK(m_emitThread != QThread::currentThread());
-#endif
+        m_trackErrors.trackEmitDeadlock();
 
         Content oldContent;
 
@@ -122,6 +124,11 @@ public:
 
             oldContent = std::move(m_content);
             m_content.error = std::move(error);
+
+            // don't change state until stopProgress happen
+            if (m_state == ASYNC_VALUE_STATE::PROGRESS)
+                return;
+
             m_state = ASYNC_VALUE_STATE::ERROR;
         }
 
@@ -134,11 +141,9 @@ public:
 
     bool startProgress(ProgressType* progress)
     {
-#if defined(ASYNC_TRACK_DEADLOCK)
-        // Changing async value from emitStateChanged is forbidden. Deadlock will happen.
-        ASYNC_TRACK_DEADLOCK(m_emitThread != QThread::currentThread());
-#endif
         Q_ASSERT(progress);
+
+        m_trackErrors.trackEmitDeadlock();
 
         Content oldContent;
 
@@ -146,7 +151,7 @@ public:
 
         if (m_state == ASYNC_VALUE_STATE::PROGRESS)
         {
-            Q_ASSERT(false && "Cannot start progress while in progress");
+            m_trackErrors.startProgressWhileInProgress();
             return false;
         }
 
@@ -155,9 +160,12 @@ public:
 
             oldContent = std::move(m_content);
             m_progress = std::move(progress);
+            m_state = ASYNC_VALUE_STATE::PROGRESS;
+
+#ifdef QT_DEBUG
             Q_ASSERT(!m_progress->isInUse() && "Progress is used already");
             m_progress->setInUse(true);
-            m_state = ASYNC_VALUE_STATE::PROGRESS;
+#endif
         }
 
         emitStateChanged();
@@ -165,29 +173,44 @@ public:
         return true;
     }
 
-    bool stopProgress(ProgressType* progress)
+    bool completeProgress(ProgressType* progress)
     {
+#ifdef QT_DEBUG
         Q_ASSERT(progress);
+        Q_ASSERT(progress->isInUse() && "Progress should be used");
+        progress->setInUse(false);
+#endif
 
         QMutexLocker writeLocker(&m_writeLock);
 
-        Q_ASSERT(progress->isInUse() && "Progress should be used");
-        progress->setInUse(false);
-
-
         if (progress != m_progress)
         {
-            // someone has started another progress -> ignore this stopProgress
+            m_trackErrors.tryCompleteAlienProgress();
             return false;
         }
 
-        if (m_state == ASYNC_VALUE_STATE::PROGRESS)
         {
-            Q_ASSERT(false && "No value or error assigned so cannot stop progress");
-            return false;
+            QWriteLocker locker(&m_contentLock);
+
+            if (m_content.value)
+                m_state = ASYNC_VALUE_STATE::VALUE;
+            else if (m_content.error)
+                m_state = ASYNC_VALUE_STATE::ERROR;
+            else
+            {
+                m_trackErrors.incompleteProgress();
+                return false;
+            }
+
+            m_progress = nullptr;
         }
 
-        m_progress = nullptr;
+        emitStateChanged();
+
+        // notify all waiters
+        if (m_waiter)
+            m_waiter->waitValue.wakeAll();
+
         return true;
     }
 
@@ -350,6 +373,13 @@ public:
     }
 
 private:
+    void emitStateChanged()
+    {
+        using EmitGuardType = typename TrackErrorsPolicy_t::EmitGuardType;
+        EmitGuardType emitGuard(m_trackErrors);
+
+        emit stateChanged(m_state);
+    }
 
     struct Content
     {
@@ -359,6 +389,8 @@ private:
     Content m_content;
 
     ProgressType* m_progress = nullptr;
+
+    TrackErrorsPolicy_t m_trackErrors;
 };
 
 #endif // ASYNC_VALUE_TEMPLATE_H

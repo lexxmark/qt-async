@@ -30,7 +30,10 @@ HEADERS += \
     Config.h \
     widgets/AsyncWidgetProgressBar.h \
     widgets/AsyncWidgetProgressSpinner.h \
-    values/AsyncValueRun.h \
-    third_party/scope_exit.h
+    third_party/scope_exit.h \
+    values/AsyncValueRunThreadPool.h \
+    values/AsyncTrackErrorsPolicy.h \
+    values/AsyncValueRunThread.h \
+    values/AsyncValueRunable.h
 	
 DEFINES += QT_DEPRECATED_WARNINGS

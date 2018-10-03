@@ -13,8 +13,11 @@ public:
 private Q_SLOTS:
 
     void simple();
+    void runInThread();
+    void runInThreadPool();
     void catchDeadlock();
     void wait();
+    void run();
 };
 
 #endif // TEST_ASYNC_VALUE_H

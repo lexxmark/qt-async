@@ -44,19 +44,6 @@ signals:
 protected:
     explicit AsyncValueBase(ASYNC_VALUE_STATE state, QObject* parent = nullptr);
 
-    void emitStateChanged()
-    {
-#if defined(ASYNC_TRACK_DEADLOCK)
-        Q_ASSERT(!m_emitThread && "This function is not reenterant");
-        m_emitThread = QThread::currentThread();
-        SCOPE_EXIT {
-            m_emitThread = nullptr;
-        };
-#endif
-
-        emit stateChanged(m_state);
-    }
-
     QMutex m_writeLock;
     QReadWriteLock m_contentLock;
     ASYNC_VALUE_STATE m_state;
@@ -69,10 +56,6 @@ protected:
         QWaitCondition waitSubWaiters;
     };
     Waiter* m_waiter = nullptr;
-
-#if defined(ASYNC_TRACK_DEADLOCK)
-    QThread* m_emitThread = nullptr;
-#endif
 };
 
 #endif // ASYNC_VALUE_BASE_H

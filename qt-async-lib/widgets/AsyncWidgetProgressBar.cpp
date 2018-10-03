@@ -47,7 +47,9 @@ AsyncWidgetProgressBar::AsyncWidgetProgressBar(AsyncProgress& progress, QWidget*
         }
 
         {
-            auto subLayout = new QHBoxLayout(this);
+            auto subLayout = new QHBoxLayout();
+            layout->addLayout(subLayout);
+
             subLayout->setSpacing(6);
 
             // progress
@@ -68,8 +70,6 @@ AsyncWidgetProgressBar::AsyncWidgetProgressBar(AsyncProgress& progress, QWidget*
                 subLayout->addWidget(m_stop);
                 QObject::connect(m_stop, &QPushButton::clicked, this, &AsyncWidgetProgressBar::onStopClicked);
             }
-
-            layout->addLayout(subLayout);
         }
     }
 

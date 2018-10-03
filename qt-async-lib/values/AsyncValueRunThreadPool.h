@@ -14,32 +14,35 @@
    limitations under the License.
 */
 
-#ifndef ASYNC_VALUE_OBTAIN_H
-#define ASYNC_VALUE_OBTAIN_H
+#ifndef ASYNC_VALUE_RUN_THREAD_POOL_H
+#define ASYNC_VALUE_RUN_THREAD_POOL_H
 
 #include <QThreadPool>
 #include <QtConcurrent>
 
 template <typename AsyncValueType, typename Func, typename... ProgressArgs>
-bool asyncValueRun(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
+bool asyncValueRunThreadPool(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
     auto progress = std::make_unique<typename AsyncValueType::ProgressType>(std::forward<ProgressArgs>(progressArgs)...);
     if (!value.startProgress(progress.get()))
         return false;
 
     QtConcurrent::run(pool, [&value, progressPtr = progress.release(), func = std::forward<Func>(func)](){
+        // make unique_ptr from raw ptr
         std::unique_ptr<typename AsyncValueType::ProgressType> progress(progressPtr);
+        // run calculation
         func(*progress, value);
-        value.stopProgress(progress.get());
+        // post progress stuff
+        value.completeProgress(progress.get());
     });
 
     return true;
 }
 
 template <typename AsyncValueType, typename Func, typename... ProgressArgs>
-bool asyncValueRun(AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
+bool asyncValueRunThreadPool(AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
-    return asyncValueRun(QThreadPool::globalInstance(), value, std::forward<Func>(func), std::forward<ProgressArgs>(progressArgs)...);
+    return asyncValueRunThreadPool(QThreadPool::globalInstance(), value, std::forward<Func>(func), std::forward<ProgressArgs>(progressArgs)...);
 }
 
-#endif // ASYNC_VALUE_OBTAIN_H
+#endif // ASYNC_VALUE_RUN_THREAD_POOL_H

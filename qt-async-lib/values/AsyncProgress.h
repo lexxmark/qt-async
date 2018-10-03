@@ -37,7 +37,9 @@ public:
 
     ~AsyncProgress()
     {
+#ifdef QT_DEBUG
         Q_ASSERT(!m_isInUse && "Progress is still used.");
+#endif
     }
 
     QString message() const { return m_message; }
@@ -51,15 +53,49 @@ public:
     void setProgress(Num current, Num total) { setProgress(static_cast<float>(current) / static_cast<float>(total)); }
     void requestStop() { m_isStopRequested = true; }
 
+#ifdef QT_DEBUG
     bool isInUse() const { return m_isInUse; }
     void setInUse(bool inUse) { m_isInUse = inUse; }
+#endif
 
-private:
+protected:
     QString m_message;
     float m_progress = 0.f;
     ASYNC_CAN_REQUEST_STOP m_canRequestStop = ASYNC_CAN_REQUEST_STOP::YES;
     bool m_isStopRequested = false;
+
+#ifdef QT_DEBUG
     bool m_isInUse = false;
+#endif
+};
+
+class AsyncProgressRerun : public AsyncProgress
+{
+    Q_DISABLE_COPY(AsyncProgressRerun)
+
+public:
+    using AsyncProgress::AsyncProgress;
+
+    ~AsyncProgressRerun()
+    {
+        Q_ASSERT(!m_isRerunRequested && "Rerun had been requested but not resolved");
+    }
+
+    bool isRerunRequested() const { return m_isRerunRequested; }
+    void requestRerun()
+    {
+        m_isRerunRequested = true;
+        requestStop();
+    }
+
+    void reset()
+    {
+        m_isStopRequested = false;
+        m_isRerunRequested = false;
+    }
+
+protected:
+    bool m_isRerunRequested = false;
 };
 
 #endif // ASYNC_PROGRESS_H

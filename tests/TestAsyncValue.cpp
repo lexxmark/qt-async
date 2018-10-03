@@ -1,8 +1,9 @@
 #include "TestAsyncValue.h"
 #include <QtTest/QtTest>
-#include <thread>
 #include "values/AsyncValue.h"
-#include "values/AsyncValueRun.h"
+#include "values/AsyncValueRunThread.h"
+#include "values/AsyncValueRunThreadPool.h"
+#include "values/AsyncValueRunable.h"
 
 void TestAsyncValue::simple()
 {
@@ -43,6 +44,34 @@ void TestAsyncValue::simple()
     }
 }
 
+void TestAsyncValue::runInThread()
+{
+    AsyncValue<int> value(AsyncInitByValue(), 8);
+
+    asyncValueRunThread(value, [&](AsyncProgress&, AsyncValue<int>& value) {
+        QThread::sleep(1);
+       value.emplaceValue(42);
+    }, "", ASYNC_CAN_REQUEST_STOP::NO);
+
+    value.wait([](int val){
+        QCOMPARE(val, 42);
+    }, AsyncNoOp());
+}
+
+void TestAsyncValue::runInThreadPool()
+{
+    AsyncValue<int> value(AsyncInitByValue(), 8);
+
+    asyncValueRunThreadPool(value, [&](AsyncProgress&, AsyncValue<int>& value) {
+        QThread::sleep(1);
+       value.emplaceValue(42);
+    }, "", ASYNC_CAN_REQUEST_STOP::NO);
+
+    value.wait([](int val){
+        QCOMPARE(val, 42);
+    }, AsyncNoOp());
+}
+
 void TestAsyncValue::catchDeadlock()
 {
     AsyncValue<int> value(AsyncInitByValue(), 8);
@@ -67,8 +96,6 @@ void TestAsyncValue::catchDeadlock()
 
 void TestAsyncValue::wait()
 {
-    using namespace std::chrono_literals;
-
     AsyncValue<int> value(AsyncInitByValue(), 8);
 
     QMutex lock;
@@ -101,10 +128,10 @@ void TestAsyncValue::wait()
         clients.push_back(future);
     }
 
-    asyncValueRun(&pool, value, [&](AsyncProgress&, AsyncValue<int>& value){
+    asyncValueRunThreadPool(&pool, value, [&](AsyncProgress&, AsyncValue<int>& value){
         sem.acquire(15);
         isRunning.notify_all();
-        std::this_thread::sleep_for(1s);
+        QThread::sleep(1);
        value.emplaceValue(42);
     }, "", ASYNC_CAN_REQUEST_STOP::NO);
 
@@ -112,4 +139,31 @@ void TestAsyncValue::wait()
     {
         QCOMPARE(f.result(), 42);
     }
+}
+
+void TestAsyncValue::run()
+{
+    AsyncValueRunableFn<int> value(AsyncInitByValue(), 8);
+
+    int rerunTotal = 0;
+
+    value.deferFn = [&value](const AsyncValueRunableFn<int>::RunFnType& fn) {
+        asyncValueRunThreadPool(value, fn, "", ASYNC_CAN_REQUEST_STOP::YES);
+    };
+    value.runFn = [&](AsyncProgressRerun&, AsyncValueRunableFn<int>& value) {
+        QThread::sleep(1);
+        value.emplaceValue(42);
+        ++rerunTotal;
+    };
+
+    value.run();
+    value.run();
+    value.run();
+    value.run();
+    value.run();
+
+    value.wait();
+
+    // at least two runs should happen
+    QVERIFY(rerunTotal >= 2);
 }
