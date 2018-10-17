@@ -1,6 +1,6 @@
 CONFIG += c++14
 
-QT += core gui widgets
+QT += core gui widgets network
 QT += concurrent
 
 TARGET = qt-async-demo

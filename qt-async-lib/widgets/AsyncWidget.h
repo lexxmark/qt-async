@@ -23,11 +23,15 @@
 #include "AsyncWidgetError.h"
 #include "AsyncWidgetProgressBar.h"
 
-template <typename ValueType>
-class AsyncWidget : public AsyncWidgetBase<AsyncValue<ValueType>>
+template <typename AsyncValueType>
+class AsyncWidget : public AsyncWidgetBase<AsyncValueType>
 {
 public:
-    using AsyncWidgetBase<AsyncValue<ValueType>>::AsyncWidgetBase;
+    using ValueType = typename AsyncValueType::ValueType;
+    using ErrorType = typename AsyncValueType::ErrorType;
+    using ProgressType = typename AsyncValueType::ProgressType;
+
+    using AsyncWidgetBase<AsyncValueType>::AsyncWidgetBase;
 
 protected:
     QWidget* createValueWidgetImpl(ValueType& /*value*/, QWidget* parent) override
@@ -35,26 +39,30 @@ protected:
         return this->createLabel("<value widget is not implemented>", parent);
     }
 
-    QWidget* createErrorWidgetImpl(AsyncError& error, QWidget* parent) override
+    QWidget* createErrorWidgetImpl(ErrorType& error, QWidget* parent) override
     {
         return new AsyncWidgetError(error, parent);
     }
 
-    QWidget* createProgressWidgetImpl(AsyncProgress& progress, QWidget* parent) override
+    QWidget* createProgressWidgetImpl(ProgressType& progress, QWidget* parent) override
     {
         return new AsyncWidgetProgressBar(progress, parent);
     }
 };
 
-template <typename ValueType>
-class AsyncWidgetFn : public AsyncWidget<ValueType>
+template <typename AsyncValueType>
+class AsyncWidgetFn : public AsyncWidget<AsyncValueType>
 {
 public:
-    using AsyncWidget<ValueType>::AsyncWidget;
+    using ValueType = typename AsyncValueType::ValueType;
+    using ErrorType = typename AsyncValueType::ErrorType;
+    using ProgressType = typename AsyncValueType::ProgressType;
+
+    using AsyncWidget<AsyncValueType>::AsyncWidget;
 
     std::function<QWidget*(ValueType&, QWidget*)> createValueWidget;
-    std::function<QWidget*(AsyncError&, QWidget*)> createErrorWidget;
-    std::function<QWidget*(AsyncProgress&, QWidget*)> createProgressWidget;
+    std::function<QWidget*(ErrorType&, QWidget*)> createErrorWidget;
+    std::function<QWidget*(ProgressType&, QWidget*)> createProgressWidget;
 
 protected:
     QWidget* createValueWidgetImpl(ValueType& value, QWidget* parent) override
@@ -62,23 +70,23 @@ protected:
         if (createValueWidget)
             return createValueWidget(value, parent);
         else
-            return AsyncWidget<ValueType>::createValueWidgetImpl(value, parent);
+            return AsyncWidget<AsyncValueType>::createValueWidgetImpl(value, parent);
     }
 
-    QWidget* createErrorWidgetImpl(AsyncError& error, QWidget* parent) override
+    QWidget* createErrorWidgetImpl(ErrorType& error, QWidget* parent) override
     {
         if (createErrorWidget)
             return createErrorWidget(error, parent);
         else
-            return AsyncWidget<ValueType>::createErrorWidgetImpl(error, parent);
+            return AsyncWidget<AsyncValueType>::createErrorWidgetImpl(error, parent);
     }
 
-    QWidget* createProgressWidgetImpl(AsyncProgress& progress, QWidget* parent) override
+    QWidget* createProgressWidgetImpl(ProgressType& progress, QWidget* parent) override
     {
         if (createProgressWidget)
             return createProgressWidget(progress, parent);
         else
-            return AsyncWidget<ValueType>::createProgressWidgetImpl(progress, parent);
+            return AsyncWidget<AsyncValueType>::createProgressWidgetImpl(progress, parent);
     }
 };
 

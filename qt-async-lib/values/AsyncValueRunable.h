@@ -54,11 +54,8 @@ public:
                 // try to calculate value
                 runImpl(progress, value);
                 // if no rerun was requested -> we good to exit
-                if (!progress.isRerunRequested())
+                if (!progress.resetIfRerunRequested())
                     break;
-
-                // reset rerun and stop flags and try again
-                progress.reset();
             }
 
         });
@@ -106,11 +103,8 @@ public:
                 // try to calculate value
                 runFn(progress, value);
                 // if no rerun was requested -> we good to exit
-                if (!progress.isRerunRequested())
+                if (!progress.resetIfRerunRequested())
                     break;
-
-                // reset rerun and stop flags and try again
-                progress.reset();
             }
 
         });

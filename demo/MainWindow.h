@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <values/AsyncValue.h>
+#include <values/AsyncValueRunable.h>
 #include <QMainWindow>
 
 namespace Ui {
@@ -9,6 +10,7 @@ class MainWindow;
 }
 
 using AsyncQString = AsyncValue<QString>;
+using AsyncQPixmap = AsyncValueRunableFn<QPixmap>;
 
 class MainWindow : public QMainWindow
 {
@@ -30,6 +32,10 @@ private slots:
 
     void on_radioButtonSpinnerLines_clicked();
 
+    void on_imageUrlButton_clicked();
+
+    void on_imageUrl_textChanged(const QString &arg1);
+
 private:
     Ui::MainWindow *ui;
 
@@ -40,6 +46,9 @@ private:
         PROGRESS_BAR,
         SPINNER_LINES,
     } m_progressWidgetMode = PROGRESS_MODE::PROGRESS_BAR;
+
+    QString m_imageUrl;
+    AsyncQPixmap m_valuePixmap;
 };
 
 #endif // MAINWINDOW_H

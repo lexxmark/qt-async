@@ -1,4 +1,4 @@
-QT += core  concurrent testlib
+QT += core  concurrent network testlib
 QT -= gui
 
 TARGET = qt-async-tests

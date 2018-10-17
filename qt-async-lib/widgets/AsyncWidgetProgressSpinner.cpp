@@ -23,7 +23,7 @@ AsyncWidgetProgressSpinner::AsyncWidgetProgressSpinner(AsyncProgress& progress, 
     : QFrame(parent),
       m_progress(progress)
 {
-    m_spinner = new WaitingSpinnerWidget(parent, true, false);
+    m_spinner = new WaitingSpinnerWidget(this, true, false);
     m_spinner->start();
 
     auto timer = new QTimer(this);
@@ -31,6 +31,11 @@ AsyncWidgetProgressSpinner::AsyncWidgetProgressSpinner(AsyncProgress& progress, 
     timer->start(ASYNC_PROGRESS_WIDGET_UPDATE_TIMEOUT);
 
     updateContent();
+}
+
+AsyncWidgetProgressSpinner::~AsyncWidgetProgressSpinner()
+{
+
 }
 
 void AsyncWidgetProgressSpinner::updateContent()

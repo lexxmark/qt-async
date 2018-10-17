@@ -29,6 +29,7 @@ class AsyncWidgetProgressSpinner : public QFrame
 
 public:
     explicit AsyncWidgetProgressSpinner(AsyncProgress& progress, QWidget* parent);
+    ~AsyncWidgetProgressSpinner();
 
 private:
     void updateContent();

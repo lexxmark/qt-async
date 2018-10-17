@@ -18,6 +18,7 @@
 #define ASYNC_PROGRESS_H
 
 #include <QObject>
+#include <QReadWriteLock>
 
 enum class ASYNC_CAN_REQUEST_STOP
 {
@@ -42,23 +43,29 @@ public:
 #endif
     }
 
-    QString message() const { return m_message; }
-    float progress() const { return m_progress; }
-    bool canRequestStop() const { return m_canRequestStop == ASYNC_CAN_REQUEST_STOP::YES; }
-    bool isStopRequested() const { return m_isStopRequested; }
+    QString message() const { QReadLocker locker(&m_lock); return m_message; }
+    float progress() const { QReadLocker locker(&m_lock); return m_progress; }
+    bool canRequestStop() const { QReadLocker locker(&m_lock); return m_canRequestStop == ASYNC_CAN_REQUEST_STOP::YES; }
+    bool isStopRequested() const { QReadLocker locker(&m_lock); return m_isStopRequested; }
 
-    void setMessage(QString message) { m_message = std::move(message); }
-    void setProgress(float progress) { m_progress = progress; }
+    void setMessage(QString message) { QWriteLocker locker(&m_lock); m_message = std::move(message); }
+    void setProgress(float progress) { QWriteLocker locker(&m_lock); m_progress = progress; }
     template <typename Num>
-    void setProgress(Num current, Num total) { setProgress(static_cast<float>(current) / static_cast<float>(total)); }
-    void requestStop() { m_isStopRequested = true; }
+    void setProgress(Num current, Num total)
+    {
+        if (total != 0)
+            setProgress(static_cast<float>(current) / static_cast<float>(total));
+    }
+    void requestStop() { QWriteLocker locker(&m_lock); m_isStopRequested = true; }
 
 #ifdef QT_DEBUG
-    bool isInUse() const { return m_isInUse; }
-    void setInUse(bool inUse) { m_isInUse = inUse; }
+    bool isInUse() const { QReadLocker locker(&m_lock); return m_isInUse; }
+    void setInUse(bool inUse) { QWriteLocker locker(&m_lock); m_isInUse = inUse; }
 #endif
 
 protected:
+    mutable QReadWriteLock m_lock;
+
     QString m_message;
     float m_progress = 0.f;
     ASYNC_CAN_REQUEST_STOP m_canRequestStop = ASYNC_CAN_REQUEST_STOP::YES;
@@ -81,17 +88,31 @@ public:
         Q_ASSERT(!m_isRerunRequested && "Rerun had been requested but not resolved");
     }
 
-    bool isRerunRequested() const { return m_isRerunRequested; }
-    void requestRerun()
+    bool isRerunRequested() const
     {
-        m_isRerunRequested = true;
-        requestStop();
+        QReadLocker locker(&m_lock);
+        return m_isRerunRequested;
     }
 
-    void reset()
+    void requestRerun()
     {
+        QWriteLocker locker(&m_lock);
+
+        m_isRerunRequested = true;
+        m_isStopRequested = true;
+    }
+
+    bool resetIfRerunRequested()
+    {
+        QWriteLocker locker(&m_lock);
+
+        if (!m_isRerunRequested)
+            return false;
+
         m_isStopRequested = false;
         m_isRerunRequested = false;
+
+        return true;
     }
 
 protected:

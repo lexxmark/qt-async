@@ -3,6 +3,7 @@
 #include "values/AsyncValue.h"
 #include "values/AsyncValueRunThread.h"
 #include "values/AsyncValueRunThreadPool.h"
+#include "values/AsyncValueRunNetwork.h"
 #include "values/AsyncValueRunable.h"
 
 void TestAsyncValue::simple()
@@ -166,4 +167,28 @@ void TestAsyncValue::run()
 
     // at least two runs should happen
     QVERIFY(rerunTotal >= 2);
+}
+
+void TestAsyncValue::network()
+{
+    AsyncValue<int> value(AsyncInitByValue(), 8);
+    QNetworkAccessManager network;
+    QEventLoop loop;
+
+    asyncValueRunNetwork(&network, QNetworkRequest(QUrl("http://doc.qt.io/qt-5/images/qml-uses-visual-transforms.png"/*"file:///C:/Users/azhon/Downloads/18.png"*/)), value, [&loop](const QNetworkReply& reply, AsyncValue<int>& value){
+
+        // process error
+        if (reply.error() != QNetworkReply::NoError)
+            value.emplaceError(QString("Network error code: %1").arg(reply.error()));
+        else
+            value.emplaceValue(reply.bytesAvailable());
+
+        loop.quit();
+    }, "", ASYNC_CAN_REQUEST_STOP::NO);
+
+    loop.exec();
+
+    value.accessValue([](int value){
+        QCOMPARE(value, 671);
+    });
 }

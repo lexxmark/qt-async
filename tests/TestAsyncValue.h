@@ -18,6 +18,7 @@ private Q_SLOTS:
     void catchDeadlock();
     void wait();
     void run();
+    void network();
 };
 
 #endif // TEST_ASYNC_VALUE_H

@@ -5,7 +5,7 @@ TARGET = qt-async-lib
 TEMPLATE = lib
 VERSION = 1.0.0
 
-QT       += widgets concurrent
+QT       += widgets concurrent network
 QT       -= gui
 
 SOURCES += \
@@ -34,6 +34,7 @@ HEADERS += \
     values/AsyncValueRunThreadPool.h \
     values/AsyncTrackErrorsPolicy.h \
     values/AsyncValueRunThread.h \
-    values/AsyncValueRunable.h
+    values/AsyncValueRunable.h \
+    values/AsyncValueRunNetwork.h
 	
 DEFINES += QT_DEPRECATED_WARNINGS
