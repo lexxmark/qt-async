@@ -267,7 +267,7 @@ private:
     QString m_text;
 };
 ```
-The `ProgressType_t` parameter represented by `AsyncProgress` with following functions:
+The `ProgressType_t` parameter represented by `AsyncProgress` with the following functions:
 ```C++
     // the text describing the current progress
     QString message() const;
@@ -293,3 +293,33 @@ The `ProgressType_t` parameter represented by `AsyncProgress` with following fun
     void requestStop();
 ```
 
+`TrackErrorsPolicy_t` parameter is used to customize reaction to inconsistent or incorrect situations:
+```C++
+ struct AsyncTrackErrorsPolicy
+{
+    // class to catch emit deadlocks
+    struct EmitGuard
+    {
+        EmitGuard(AsyncTrackErrorsPolicyNone&) {}
+    };
+
+    using EmitGuardType = EmitGuard;
+
+    // called when async value is changing inside stateChanged signal handler
+    // this incorrect situation will lead to a deadlock 
+    void trackEmitDeadlock() const;
+    
+    // called when async value is in progress and destructing at the same time
+    // usually user should call value.stopAndWait(); before value destruction
+    void inProgressWhileDestruct() const;
+    
+    // called if startProgress is called while value is in progress already
+    void startProgressWhileInProgress() const;
+    
+    // called when completeProgress is called with different progress object
+    void tryCompleteAlienProgress() const;
+    
+    // called inside value.completeProgress function if niether value nor error was assigned to value
+    void incompleteProgress() const;
+};
+```
