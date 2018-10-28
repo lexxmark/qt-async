@@ -52,16 +52,6 @@ Somewhere in GUI code declare async widget:
             return AsyncWidgetProxy::createLabel(value, parent);
         };
 
-        // optionally set callback that creates progress widget
-        valueWidget->createProgressWidget = [this](AsyncProgress& progress, QWidget* parent)->QWidget* {
-            return new AsyncWidgetProgressSpinner(progress, parent);
-        };
-
-        // optionally set callback that creates error widget
-        valueWidget->createProgressWidget = [this](AsyncError& error, QWidget* parent)->QWidget* {
-            return new AsyncWidgetError(error, parent);
-        };
-
         // assign value with widget
         valueWidget->setValue(&m_value);
 ```
@@ -83,4 +73,90 @@ Instead of callbacks you can derive widget class from AsyncWidgetBase or AsyncWi
 
 ```
 
-# Rerunnable values
+# Runnable values
+Usually it's more convinient to hide details how value is calculated. AsyncValueRunableAbstract and AsyncValueRunableFn classes are used in this case.
+```C++
+    using AsyncQPixmap = AsyncValueRunableFn<QPixmap>;
+    AsyncQPixmap value(AsyncInitByError{}, "Select image file path.");
+    
+    // set callback to run async value calculation
+    value.deferFn = [&value](const AsyncQPixmap::RunFnType& fn) {
+        asyncValueRunThread(value, fn, "Loading image...", ASYNC_CAN_REQUEST_STOP::NO);
+    };
+    // set callback to calculate value
+    value.runFn = [](AsyncProgressRerun& progress, AsyncQPixmap& value) {
+
+        auto url = getImageUrl();
+        QImage image(url);
+
+        for (auto i : {0, 1, 2, 3})
+        {
+            if (progress.isRerunRequested())
+            {
+                // exit and retry load image with new url
+                return ;
+            }
+
+            progress.setProgress(i, 4);
+
+            // do some heavy work
+            QThread::sleep(1);
+        }
+
+        if (image.isNull())
+            value.emplaceError(QString("Cannot load image from file '%1'.").arg(url));
+        else
+            value.emplaceValue(QPixmap::fromImage(image));
+    };
+```
+To calculate value user need to call run() method:
+```C++
+    value.run();
+```
+This does more than just calls value calculation in async manner. If previous calculation is not completed yet it tries to stop and rerun calculation non blocking calling thread. Here is code of the run function:
+```C++
+    void run()
+    {
+        bool isInProgress = accessProgress([](ProgressType& progress) {
+            // if we are in progress already -> just request rerun
+            progress.requestRerun();
+        });
+
+        if (isInProgress)
+            return;
+
+        // run later
+        deferFn([this] (ProgressType& progress, ThisType& value) {
+
+            for (;;)
+            {
+                // try to calculate value
+                runFn(progress, value);
+                // if no rerun was requested -> we good to exit
+                if (!progress.resetIfRerunRequested())
+                    break;
+            }
+
+        });
+    }
+```
+The code is quite straightforward.
+
+You can use the same widgets to show runnable values in GUI:
+```C++
+        auto valueWidget = new AsyncWidgetFn<AsyncQPixmap>(ui->widget);
+
+        valueWidget->createValueWidget = [](QPixmap& value, QWidget* parent) {
+            auto label = new QLabel(parent);
+            label->setAlignment(Qt::AlignCenter);
+            label->setPixmap(value);
+            label->setStyleSheet("border: 1px solid black");
+            return label;
+        };
+
+        valueWidget->setValue(&value);
+```
+
+# Customizations
+
+
