@@ -10,9 +10,9 @@ using AsyncQString = AsyncValue<QString>;
 AsyncQString value(AsyncInitByValue{}, "Hello World!");
 ```
 
-When you need to calculate value, call one of the asyncXXX functions:
+When you need to calculate value, call one of the *asyncXXX* functions:
 ```C++
-    asyncValueRunThreadPool(value, [](AsyncProgress& progress, AsyncQString& value) {
+    bool success = asyncValueRunThreadPool(value, [](AsyncProgress& progress, AsyncQString& value) {
 
         // a long calculations
         for (auto i : {0, 1, 2, 3, 4})
@@ -44,7 +44,7 @@ When you need to calculate value, call one of the asyncXXX functions:
 Somewhere in GUI code declare async widget:
 ```C++
         // create widget
-        auto valueWidget = new AsyncWidgetFn<AsyncQString>(ui->widget);
+        auto valueWidget = new AsyncWidgetFn<AsyncQString>(parent);
         
         // set callback that creates widget to show value
         valueWidget->createValueWidget = [](QString& value, QWidget* parent) {
@@ -52,11 +52,11 @@ Somewhere in GUI code declare async widget:
             return AsyncWidgetProxy::createLabel(value, parent);
         };
 
-        // assign value with widget
-        valueWidget->setValue(&m_value);
+        // assign async value with widget
+        valueWidget->setValue(&value);
 ```
 
-Instead of callbacks you can derive widget class from AsyncWidgetBase or AsyncWidget classes and override four functions:
+Instead of callbacks you can derive widget class from `AsyncWidgetBase` or `AsyncWidget` classes and override 4 functions:
   
 ```C++
     // creates widget to show value
@@ -73,8 +73,92 @@ Instead of callbacks you can derive widget class from AsyncWidgetBase or AsyncWi
 
 ```
 
+# AsyncValue API
+Most of the `AsyncValue` functions can be found in `AsyncValueTemplate<...>` base class.
+
+User can initialize `AsyncValue` using value or error, `AsyncInitByValue` and `AsyncInitByError` tag classes are used to distinguish two cases:
+```C++
+    using AsyncInt = AsyncValue<int>;
+    
+    // init by value
+    AsyncInt value(AsyncInitByValue{}, 12);
+    // init by parent and value
+    auto value = new AsyncInt(parent, AsyncInitByValue{}, 12);
+    // init by error
+    AsyncInt value(AsyncInitByError{}, "No int available");
+    // init by parent and error
+    auto value = new AsyncInt(parent, AsyncInitByError{}, "No int available");
+```
+
+There is `stateChanged` signal that is emitted when async value's state changes between value, error and progress.
+
+To get the content of the async value use `access` functions and supply callables to access either value or error or progress:
+```C++
+    // get any content of the async value
+    value.access([](int value) { /* access int value here */ },
+                 [](AsyncError& error) { /* access error here */ },
+                 [](AsyncProgress& progress) { /* access progress here */ });
+                 
+   // get value of the async value
+   bool success = value.accessValue([](int value) { /* access int value here */ });
+```
+
+User can assign value using following functions:
+```C++
+    AsyncValue<std::string> value(...);
+    
+    // create value by passing value's constructor parameters
+    value.emplaceValue(5, 'b');
+    // or create value and pass it to async value
+    auto str = std::make_unique<std::string>(5, 'b');
+    value.moveValue(std::move(str));
+```
+User can assign error in a similar way:
+```C++
+    AsyncValue<std::string> value(...);
+    
+    // create error by passing error's constructor parameters
+    value.emplaceError("Some error hapenned");
+    // or create error and pass it to async value
+    auto err = std::make_unique<AsyncError>("Some error hapenned");
+    value.moveError(std::move(err));
+```
+`startProgress` and `completeProgress` functions are used by *asyncXXX* functions to start and finish progress:
+```C++
+    template <typename AsyncValueType, typename Func, typename... ProgressArgs>
+    bool asyncValueRunThreadPool(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
+    {
+        // create progress object
+        auto progress = std::make_unique<typename AsyncValueType::ProgressType>(std::forward<ProgressArgs>(progressArgs)...);
+        // try to start progress
+        if (!value.startProgress(progress.get()))
+            return false;
+
+        QtConcurrent::run(pool, [&value, progressPtr = progress.release(), func = std::forward<Func>(func)](){
+            // make unique_ptr from raw ptr
+            std::unique_ptr<typename AsyncValueType::ProgressType> progress(progressPtr);
+            // run calculation
+            func(*progress, value);
+            // post progress stuff
+            value.completeProgress(progress.get());
+        });
+
+        return true;
+    }
+```
+
+Also user has an ability to wait async value for result:
+```C++
+    AsyncValue<int> value(...);
+    ...
+    value.wait([](int value) { /* access int value here */ },
+               [](AsyncError& error) { /* access error here */ });
+```
+
 # Runnable values
-Usually it's more convinient to hide details how value is calculated. AsyncValueRunableAbstract and AsyncValueRunableFn classes are used in this case.
+Usually it's more convinient to hide details how value is calculated.
+
+`AsyncValueRunableAbstract` and `AsyncValueRunableFn` classes are used in this case.
 ```C++
     using AsyncQPixmap = AsyncValueRunableFn<QPixmap>;
     AsyncQPixmap value(AsyncInitByError{}, "Select image file path.");
@@ -113,7 +197,7 @@ To calculate value user need to call run() method:
 ```C++
     value.run();
 ```
-This does more than just calls value calculation in async manner. If previous calculation is not completed yet it tries to stop and rerun calculation non blocking calling thread. Here is code of the run function:
+This does more than just calls value calculation in async manner. If previous calculation is not completed yet it tries to stop and rerun calculation. It not blocks calling thread. Here is a code of the run function:
 ```C++
     void run()
     {
@@ -132,7 +216,7 @@ This does more than just calls value calculation in async manner. If previous ca
             {
                 // try to calculate value
                 runFn(progress, value);
-                // if no rerun was requested -> we good to exit
+                // if no rerun was requested -> we are good to exit
                 if (!progress.resetIfRerunRequested())
                     break;
             }
@@ -142,7 +226,7 @@ This does more than just calls value calculation in async manner. If previous ca
 ```
 The code is quite straightforward.
 
-You can use the same widgets to show runnable values in GUI:
+User can use the same widgets to show runnable values in GUI:
 ```C++
         auto valueWidget = new AsyncWidgetFn<AsyncQPixmap>(ui->widget);
 
@@ -158,7 +242,7 @@ You can use the same widgets to show runnable values in GUI:
 ```
 
 # Customizations
-All async value classes are inherited from AsyncValueTemplate template class:
+All async value classes are inherited from `AsyncValueTemplate` template class:
 ```C++
 template <typename ValueType_t, typename ErrorType_t, typename ProgressType_t, typename TrackErrorsPolicy_t>
 class AsyncValueTemplate : public AsyncValueBase
@@ -166,6 +250,46 @@ class AsyncValueTemplate : public AsyncValueBase
     ...
 };
 ```
-So users can override all type parameters to better adopt async values to their environment.
+So users can override all type parameters to better adopt async values.
 
+By default `ErrorType_t` parameter is a `AsyncError` class:
+```C++
+class AsyncError
+{
+public:
+    AsyncError(QString text)
+        : m_text(std::move(text))
+    {}
+
+    QString text() const { return m_text; }
+
+private:
+    QString m_text;
+};
+```
+The `ProgressType_t` parameter represented by `AsyncProgress` with following functions:
+```C++
+    // the text describing the current progress
+    QString message() const;
+    // current progress position in [0, 1]
+    float progress() const;
+    // returns true if progress can handle stop requests
+    bool canRequestStop() const;
+    // returns true if progress was requested to stop
+    bool isStopRequested() const;
+
+    // sets text describing the current progress
+    void setMessage(QString message);
+    // sets current progress position in [0, 1]
+    void setProgress(float progress);
+    // sets current position using current step and total number of steps
+    template <typename Num>
+    void setProgress(Num current, Num total)
+    {
+        if (total != 0)
+            setProgress(static_cast<float>(current) / static_cast<float>(total));
+    }
+    // requests stop of the current progress
+    void requestStop();
+```
 
