@@ -158,5 +158,14 @@ You can use the same widgets to show runnable values in GUI:
 ```
 
 # Customizations
+All async value classes are inherited from AsyncValueTemplate template class:
+```C++
+template <typename ValueType_t, typename ErrorType_t, typename ProgressType_t, typename TrackErrorsPolicy_t>
+class AsyncValueTemplate : public AsyncValueBase
+{
+    ...
+};
+```
+So users can override all type parameters to better adopt async values to their environment.
 
 
