@@ -40,6 +40,10 @@ When you need to calculate value, call one of the *asyncXXX* functions:
 
     }, "Loading...", ASYNC_CAN_REQUEST_STOP::YES);
 ```
+The available functions are:
+* `asyncValueRunThread` - creates QThread, does calculations and deletes QThread (don't use this function)
+* `asyncValueRunThreadPool` - does calculation in a Qt thread pool
+* `asyncValueRunNetwork` - waits QNetworkReply and does calculation from it.
 
 Somewhere in GUI code declare async widget:
 ```C++
@@ -91,6 +95,11 @@ User can initialize `AsyncValue` using value or error, `AsyncInitByValue` and `A
 ```
 
 There is `stateChanged` signal that is emitted when async value's state changes between value, error and progress.
+```C++
+    QObject::connect(value, &AsyncValueBase::stateChanged, [](ASYNC_VALUE_STATE state) {
+        // async value state change handler
+    });
+```
 
 To get the content of the async value use `access` functions and supply callables to access either value or error or progress:
 ```C++
@@ -128,19 +137,22 @@ User can assign error in a similar way:
     template <typename AsyncValueType, typename Func, typename... ProgressArgs>
     bool asyncValueRunThreadPool(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
     {
-        // create progress object
+        // create progress
         auto progress = std::make_unique<typename AsyncValueType::ProgressType>(std::forward<ProgressArgs>(progressArgs)...);
-        // try to start progress
-        if (!value.startProgress(progress.get()))
+        auto progressPtr = progress.get();
+        
+        // try to switch async value to progress state
+        if (!value.startProgress(std::move(progress)))
             return false;
 
-        QtConcurrent::run(pool, [&value, progressPtr = progress.release(), func = std::forward<Func>(func)](){
-            // make unique_ptr from raw ptr
-            std::unique_ptr<typename AsyncValueType::ProgressType> progress(progressPtr);
+        QtConcurrent::run(pool, [&value, progressPtr, func = std::forward<Func>(func)](){
+            SCOPE_EXIT {
+                // post progress stuff
+                value.completeProgress(progressPtr);
+            };
+
             // run calculation
-            func(*progress, value);
-            // post progress stuff
-            value.completeProgress(progress.get());
+            func(*progressPtr, value);
         });
 
         return true;
@@ -322,4 +334,28 @@ The `ProgressType_t` parameter represented by `AsyncProgress` with the following
     // called inside value.completeProgress function if niether value nor error was assigned to value
     void incompleteProgress() const;
 };
+```
+
+To use sdync values with different asynchronious API or framework you can create asynXXX like function.
+The schema is simple:
+```C++
+template <typename AsyncValueType, ...>
+bool asyncValueMyFramework(AsyncValueType& value, Routine func, ...)
+{
+    // create progress
+    auto progress = std::make_unique<typename AsyncValueType::ProgressType>(...);
+    auto progressPtr = progress.get();
+    
+    // try to switch value to progress state
+    if (!value.startProgress(std::move(progress)))
+        return false;
+
+    // move async value and calculation routine to MyFramework
+    MyFramework::AsyncCall([&value, progressPtr, func = std::forward<Func>(func)]() {
+        func(...);
+        
+        // finalize progress
+        value..completeProgress(progressPtr);
+    });
+}
 ```
