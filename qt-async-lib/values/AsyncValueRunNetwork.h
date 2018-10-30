@@ -19,28 +19,33 @@
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include "../third_party/scope_exit.h"
 
 template <typename AsyncValueType, typename Func, typename... ProgressArgs>
 bool asyncValueRunNetwork(QNetworkReply* reply, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
     auto progress = std::make_unique<typename AsyncValueType::ProgressType>(std::forward<ProgressArgs>(progressArgs)...);
-    if (!value.startProgress(progress.get()))
+    auto progressPtr = progress.get();
+
+    if (!value.startProgress(std::move(progress)))
         return false;
 
     // forward progress
-    QObject::connect(reply, &QNetworkReply::downloadProgress, [progress = progress.get()](qint64 bytesReceived, qint64 bytesTotal){
-        progress->setProgress(bytesReceived, bytesTotal);
+    QObject::connect(reply, &QNetworkReply::downloadProgress, [progressPtr](qint64 bytesReceived, qint64 bytesTotal){
+        progressPtr->setProgress(bytesReceived, bytesTotal);
     });
 
     // post processing
     QObject::connect(reply, &QNetworkReply::finished, [ reply,
                                                         &value,
-                                                        progress = std::move(progress),
+                                                        progressPtr,
                                                         func = std::forward<Func>(func)](){
-        func(*reply, value);
+        SCOPE_EXIT {
+            reply->deleteLater();
+            value.completeProgress(progressPtr);
+        };
 
-        reply->deleteLater();
-        value.completeProgress(progress.get());
+        func(*reply, value);
     });
 
     return true;

@@ -18,19 +18,25 @@
 #define ASYNC_VALUE_RUN_THREAD_H
 
 #include <QThread>
+#include "../third_party/scope_exit.h"
 
 template <typename AsyncValueType, typename Func, typename... ProgressArgs>
 bool asyncValueRunThread(AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
     auto progress = std::make_unique<typename AsyncValueType::ProgressType>(std::forward<ProgressArgs>(progressArgs)...);
-    if (!value.startProgress(progress.get()))
+    auto progressPtr = progress.get();
+
+    if (!value.startProgress(std::move(progress)))
         return false;
 
-    auto thread = QThread::create([&value, progress = std::move(progress), func = std::forward<Func>(func)]() {
+    auto thread = QThread::create([&value, progressPtr, func = std::forward<Func>(func)]() {
+        SCOPE_EXIT {
+            // post progress stuff
+            value.completeProgress(progressPtr);
+        };
+
         // run calculation
-        func(*progress, value);
-        // post progress stuff
-        value.completeProgress(progress.get());
+        func(*progressPtr, value);
     });
 
     if (!thread)

@@ -19,21 +19,25 @@
 
 #include <QThreadPool>
 #include <QtConcurrent>
+#include "../third_party/scope_exit.h"
 
 template <typename AsyncValueType, typename Func, typename... ProgressArgs>
 bool asyncValueRunThreadPool(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
 {
     auto progress = std::make_unique<typename AsyncValueType::ProgressType>(std::forward<ProgressArgs>(progressArgs)...);
-    if (!value.startProgress(progress.get()))
+    auto progressPtr = progress.get();
+
+    if (!value.startProgress(std::move(progress)))
         return false;
 
-    QtConcurrent::run(pool, [&value, progressPtr = progress.release(), func = std::forward<Func>(func)](){
-        // make unique_ptr from raw ptr
-        std::unique_ptr<typename AsyncValueType::ProgressType> progress(progressPtr);
+    QtConcurrent::run(pool, [&value, progressPtr, func = std::forward<Func>(func)](){
+        SCOPE_EXIT {
+            // post progress stuff
+            value.completeProgress(progressPtr);
+        };
+
         // run calculation
-        func(*progress, value);
-        // post progress stuff
-        value.completeProgress(progress.get());
+        func(*progressPtr, value);
     });
 
     return true;

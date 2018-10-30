@@ -139,7 +139,7 @@ public:
             m_waiter->waitValue.wakeAll();
     }
 
-    bool startProgress(ProgressType* progress)
+    bool startProgress(std::unique_ptr<ProgressType> progress)
     {
         Q_ASSERT(progress);
 
@@ -183,7 +183,7 @@ public:
 
         QMutexLocker writeLocker(&m_writeLock);
 
-        if (progress != m_progress)
+        if (progress != m_progress.get())
         {
             m_trackErrors.tryCompleteAlienProgress();
             return false;
@@ -388,7 +388,7 @@ private:
     };
     Content m_content;
 
-    ProgressType* m_progress = nullptr;
+    std::unique_ptr<ProgressType> m_progress;
 
     TrackErrorsPolicy_t m_trackErrors;
 };
