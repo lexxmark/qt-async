@@ -41,9 +41,9 @@ When you need to calculate value, call one of the `asyncValueRunXXX` functions:
     }, "Loading...", ASYNC_CAN_REQUEST_STOP::YES);
 ```
 The available functions are:
-* [asyncValueRunThread](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncValueRunThread.h#L23) - creates QThread, does calculations and deletes QThread (don't use this function)
-* [asyncValueRunThreadPool](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncValueRunThreadPool.h#L24) - does calculation in a Qt thread pool
-* [asyncValueRunNetwork](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncValueRunNetwork.h#L24) - waits QNetworkReply and does calculation from it.
+* [asyncValueRunThread](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunThread.h#L23) - creates QThread, does calculations and deletes QThread (don't use this function)
+* [asyncValueRunThreadPool](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunThreadPool.h#L24) - does calculation in a Qt thread pool
+* [asyncValueRunNetwork](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunNetwork.h#L24) - waits QNetworkReply and does calculation from it.
 See tests for examples.
 
 Somewhere in GUI code declare async widget:
@@ -61,7 +61,7 @@ Somewhere in GUI code declare async widget:
         valueWidget->setValue(&value);
 ```
 
-Instead of callbacks you can derive widget class from [AsyncWidgetBase](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/widgets/AsyncWidgetBase.h#L24) or [AsyncWidget](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/widgets/AsyncWidget.h#L27) classes and override 4 functions:
+Instead of callbacks you can derive widget class from [AsyncWidgetBase](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/widgets/AsyncWidgetBase.h#L24) or [AsyncWidget](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/widgets/AsyncWidget.h#L27) classes and override 4 functions:
   
 ```C++
     // creates widget to show value
@@ -78,7 +78,7 @@ Instead of callbacks you can derive widget class from [AsyncWidgetBase](https://
 ```
 
 # AsyncValue API
-Most of the `AsyncValue` functions can be found in [AsyncValueTemplate<...>](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncValueTemplate.h#L35) base class.
+Most of the `AsyncValue` functions can be found in [AsyncValueTemplate<...>](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueTemplate.h#L35) base class.
 
 User can initialize `AsyncValue` using value or error, `AsyncInitByValue` and `AsyncInitByError` tag classes are used to distinguish these two cases:
 ```C++
@@ -170,7 +170,7 @@ Also user has an ability to wait async value for result:
 # Runnable values
 Usually it's more convinient to hide details how value is calculated.
 
-[AsyncValueRunableAbstract](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncValueRunable.h#L26) and [AsyncValueRunableFn](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncValueRunable.h#L71) classes are used in this case.
+[AsyncValueRunableAbstract](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunable.h#L26) and [AsyncValueRunableFn](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunable.h#L71) classes are used in this case.
 ```C++
     using AsyncQPixmap = AsyncValueRunableFn<QPixmap>;
     AsyncQPixmap value(AsyncInitByError{}, "Select image file path.");
@@ -264,7 +264,7 @@ class AsyncValueTemplate : public AsyncValueBase
 ```
 So users can override all type parameters to better adopt async values to different environments.
 
-By default `ErrorType_t` parameter is an [AsyncError](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncError.h#L22) class:
+By default `ErrorType_t` parameter is an [AsyncError](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncError.h#L22) class:
 ```C++
 class AsyncError
 {
@@ -279,7 +279,7 @@ private:
     QString m_text;
 };
 ```
-The `ProgressType_t` parameter represented by [AsyncProgress](https://github.com/lexxmark/qt-async/blob/0e6baeae83155d37ef7448304c9e170346be3f74/qt-async-lib/values/AsyncProgress.h#L29) with the following functions:
+The `ProgressType_t` parameter represented by [AsyncProgress](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncProgress.h#L29) with the following functions:
 ```C++
     // the text describing the current progress
     QString message() const;
