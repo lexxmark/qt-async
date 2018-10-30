@@ -331,7 +331,7 @@ The `ProgressType_t` parameter represented by [AsyncProgress](https://github.com
     // called when completeProgress is called with different progress object
     void tryCompleteAlienProgress() const;
     
-    // called inside value.completeProgress function if niether value nor error was assigned to value
+    // called inside value.completeProgress function if niether value nor error was assigned to async value
     void incompleteProgress() const;
 };
 ```
