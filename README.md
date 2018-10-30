@@ -10,7 +10,7 @@ using AsyncQString = AsyncValue<QString>;
 AsyncQString value(AsyncInitByValue{}, "Hello World!");
 ```
 
-When you need to calculate value, call one of the *asyncXXX* functions:
+When you need to calculate value, call one of the `asyncValueRunXXX` functions:
 ```C++
     bool success = asyncValueRunThreadPool(value, [](AsyncProgress& progress, AsyncQString& value) {
 
@@ -64,23 +64,22 @@ Instead of callbacks you can derive widget class from `AsyncWidgetBase` or `Asyn
   
 ```C++
     // creates widget to show value
-    virtual QWidget* createValueWidgetImpl(ValueType& value, QWidget* parent) = 0;
+    virtual QWidget* createValueWidgetImpl(ValueType& value, QWidget* parent);
     
     // creates widget to show error
-    virtual QWidget* createErrorWidgetImpl(ErrorType& error, QWidget* parent) = 0;
+    virtual QWidget* createErrorWidgetImpl(ErrorType& error, QWidget* parent);
     
     // creates widget to show progress
-    virtual QWidget* createProgressWidgetImpl(ProgressType& progress, QWidget* parent) = 0;
+    virtual QWidget* createProgressWidgetImpl(ProgressType& progress, QWidget* parent);
     
-    // create widget when no value has been assigned
-    virtual QWidget* createNoAsyncValueWidgetImpl(QWidget* parent) { return createLabel("<no value>", parent); }
-
+    // creates widget when no async value has been assigned to async widget
+    virtual QWidget* createNoAsyncValueWidgetImpl(QWidget* parent);
 ```
 
 # AsyncValue API
 Most of the `AsyncValue` functions can be found in `AsyncValueTemplate<...>` base class.
 
-User can initialize `AsyncValue` using value or error, `AsyncInitByValue` and `AsyncInitByError` tag classes are used to distinguish two cases:
+User can initialize `AsyncValue` using value or error, `AsyncInitByValue` and `AsyncInitByError` tag classes are used to distinguish these two cases:
 ```C++
     using AsyncInt = AsyncValue<int>;
     
@@ -94,7 +93,7 @@ User can initialize `AsyncValue` using value or error, `AsyncInitByValue` and `A
     auto value = new AsyncInt(parent, AsyncInitByError{}, "No int available");
 ```
 
-There is `stateChanged` signal that is emitted when async value's state changes between value, error and progress.
+There is `stateChanged` signal that is emitted when async value's state changes between value, error and progress. NOTE: you cannot modify async value in it's stateChanged signal handler otherwise deadlock will happen.
 ```C++
     QObject::connect(value, &AsyncValueBase::stateChanged, [](ASYNC_VALUE_STATE state) {
         // async value state change handler
@@ -132,7 +131,7 @@ User can assign error in a similar way:
     auto err = std::make_unique<AsyncError>("Some error hapenned");
     value.moveError(std::move(err));
 ```
-`startProgress` and `completeProgress` functions are used by *asyncXXX* functions to start and finish progress:
+`startProgress` and `completeProgress` functions are used by `asyncValueRunXXX` functions to start and finish progress:
 ```C++
     template <typename AsyncValueType, typename Func, typename... ProgressArgs>
     bool asyncValueRunThreadPool(QThreadPool *pool, AsyncValueType& value, Func&& func, ProgressArgs&& ...progressArgs)
@@ -147,7 +146,7 @@ User can assign error in a similar way:
 
         QtConcurrent::run(pool, [&value, progressPtr, func = std::forward<Func>(func)](){
             SCOPE_EXIT {
-                // post progress stuff
+                // finish progress
                 value.completeProgress(progressPtr);
             };
 
@@ -175,11 +174,11 @@ Usually it's more convinient to hide details how value is calculated.
     using AsyncQPixmap = AsyncValueRunableFn<QPixmap>;
     AsyncQPixmap value(AsyncInitByError{}, "Select image file path.");
     
-    // set callback to run async value calculation
+    // set callback to start async value calculation
     value.deferFn = [&value](const AsyncQPixmap::RunFnType& fn) {
         asyncValueRunThread(value, fn, "Loading image...", ASYNC_CAN_REQUEST_STOP::NO);
     };
-    // set callback to calculate value
+    // set callback to calculate actual value
     value.runFn = [](AsyncProgressRerun& progress, AsyncQPixmap& value) {
 
         auto url = getImageUrl();
@@ -209,7 +208,7 @@ To calculate value user need to call run() method:
 ```C++
     value.run();
 ```
-This does more than just calls value calculation in async manner. If previous calculation is not completed yet it tries to stop and rerun calculation. It not blocks calling thread. Here is a code of the run function:
+This does more than just calls value calculation in async manner. If previous calculation is not completed yet it tries to stop and rerun calculation. It doesn't block calling thread. Here is a code of the run function:
 ```C++
     void run()
     {
@@ -262,7 +261,7 @@ class AsyncValueTemplate : public AsyncValueBase
     ...
 };
 ```
-So users can override all type parameters to better adopt async values.
+So users can override all type parameters to better adopt async values to different environments.
 
 By default `ErrorType_t` parameter is a `AsyncError` class:
 ```C++
@@ -336,11 +335,11 @@ The `ProgressType_t` parameter represented by `AsyncProgress` with the following
 };
 ```
 
-To use sdync values with different asynchronious API or framework you can create asynXXX like function.
+To use async values with different asynchronious API or frameworks you can create `asynValueRunXXX` like function.
 The schema is simple:
 ```C++
 template <typename AsyncValueType, ...>
-bool asyncValueMyFramework(AsyncValueType& value, Routine func, ...)
+bool asyncValueRunMyFramework(AsyncValueType& value, Routine func, ...)
 {
     // create progress
     auto progress = std::make_unique<typename AsyncValueType::ProgressType>(...);
@@ -352,6 +351,7 @@ bool asyncValueMyFramework(AsyncValueType& value, Routine func, ...)
 
     // move async value and calculation routine to MyFramework
     MyFramework::AsyncCall([&value, progressPtr, func = std::forward<Func>(func)]() {
+        // invoke routine
         func(...);
         
         // finalize progress
