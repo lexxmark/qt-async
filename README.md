@@ -44,6 +44,7 @@ The available functions are:
 * `asyncValueRunThread` - creates QThread, does calculations and deletes QThread (don't use this function)
 * `asyncValueRunThreadPool` - does calculation in a Qt thread pool
 * `asyncValueRunNetwork` - waits QNetworkReply and does calculation from it.
+See tests for examples.
 
 Somewhere in GUI code declare async widget:
 ```C++
@@ -355,7 +356,7 @@ bool asyncValueRunMyFramework(AsyncValueType& value, Routine func, ...)
         func(...);
         
         // finalize progress
-        value..completeProgress(progressPtr);
+        value.completeProgress(progressPtr);
     });
 }
 ```
