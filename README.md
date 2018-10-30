@@ -305,7 +305,7 @@ The `ProgressType_t` parameter represented by [AsyncProgress](https://github.com
     void requestStop();
 ```
 
-`TrackErrorsPolicy_t` parameter is used to customize reaction to inconsistent or incorrect situations:
+`TrackErrorsPolicy_t` parameter is used to customize reaction to inconsistent or incorrect situations. By default [AsyncTrackErrorsPolicyDefault](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncTrackErrorsPolicy.h#L39) class is used:
 ```C++
  struct AsyncTrackErrorsPolicy
 {
