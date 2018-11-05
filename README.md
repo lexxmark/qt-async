@@ -252,6 +252,109 @@ User can use the same widgets to show runnable values in GUI:
 
         valueWidget->setValue(&value);
 ```
+# Advanced example
+In the [MyPixmap.h](https://github.com/lexxmark/qt-async/blob/master/demo/mypixmap.h) file you can find a complete example how to adopt async values and widgets for your needs.
+
+Let's say you have some class to load and store QPixmap. Loading image from external url should be done asynchronously. Here we just inherit our class from `AsyncValueRunableAbstract<QPixmap>` class and override `deferImpl` and `runImpl` functions. When image url has changed we call `run` to perform image loading in a separate thread:
+```C++
+class MyPixmap : public AsyncValueRunableAbstract<QPixmap>
+{
+public:
+    // init pixmap with an error
+    MyPixmap()
+        : AsyncValueRunableAbstract<QPixmap>(AsyncInitByError{}, "Select image file path.")
+    {
+    }
+
+    // returns umage url
+    // threadsafe
+    QString imageUrl() const
+    {
+        QReadLocker locker(&m_urlLock);
+        return m_imageUrl;
+    }
+
+    // sets new image url and requests image loading
+    // threadsafe
+    void setImageUrl(QString url)
+    {
+        // change image url
+        {
+            QWriteLocker locker(&m_urlLock);
+            m_imageUrl = url;
+        }
+
+        // reload image
+        run();
+    }
+
+protected:
+    // hide run from public
+    using AsyncValueRunableAbstract<QPixmap>::run;
+
+    // actual image loading will be performed in a separate thread
+    void deferImpl(RunFnType&& func) final
+    {
+        asyncValueRunThread(*this, func, "Loading image...", ASYNC_CAN_REQUEST_STOP::NO);
+    }
+
+    // image loading code
+    void runImpl(ProgressType& progress) final
+    {
+        auto url = imageUrl();
+
+        QImage image(m_imageUrl);
+
+        for (auto i : {0, 1, 2, 3})
+        {
+            if (progress.isRerunRequested())
+            {
+                // exit and retry load image with a new path
+                return ;
+            }
+
+            progress.setProgress(i, 4);
+
+            // do some heavy work
+            QThread::sleep(1);
+        }
+
+        if (image.isNull())
+            emplaceError(QString("Cannot load image from file '%1'.").arg(m_imageUrl));
+        else
+            emplaceValue(QPixmap::fromImage(image));
+    }
+
+private:
+    mutable QReadWriteLock m_urlLock;
+    QString m_imageUrl;
+};
+```
+The widget for `MyPixmap` class could be implemented like this:
+```C++
+class MyPixmapWidget : public AsyncWidget<MyPixmap>
+{
+public:
+    MyPixmapWidget(QWidget* parent, MyPixmap* value)
+        : AsyncWidget<MyPixmap>(parent)
+    {
+        setValue(value);
+    }
+
+protected:
+    // creates QLabel to show QPixmap image
+    QWidget* createValueWidgetImpl(QPixmap& value, QWidget* parent) final
+    {
+        auto label = new QLabel(parent);
+        label->setAlignment(Qt::AlignCenter);
+        label->setPixmap(value);
+        label->setStyleSheet("border: 1px solid black");
+        return label;
+    }
+};
+```
+
+In Demo application we have 2nd tab that shows GUI for MyPixmap instance. Once user changes image url using button or editbox, the MyPixmapWidget will change its content to progress widget and show error or image on loading completion. 
 
 # Customizations
 All async value classes are inherited from `AsyncValueTemplate` template class:
