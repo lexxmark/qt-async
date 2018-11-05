@@ -175,7 +175,7 @@ void TestAsyncValue::network()
     QNetworkAccessManager network;
     QEventLoop loop;
 
-    asyncValueRunNetwork(&network, QNetworkRequest(QUrl("http://doc.qt.io/qt-5/images/qml-uses-visual-transforms.png"/*"file:///C:/Users/azhon/Downloads/18.png"*/)), value, [&loop](const QNetworkReply& reply, AsyncValue<int>& value){
+    asyncValueRunNetwork(&network, QNetworkRequest(QUrl("http://doc.qt.io/qt-5/images/qml-uses-visual-transforms.png")), value, [&loop](const QNetworkReply& reply, AsyncValue<int>& value){
 
         // process error
         if (reply.error() != QNetworkReply::NoError)

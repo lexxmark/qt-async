@@ -31,7 +31,7 @@ bool asyncValueRunThread(AsyncValueType& value, Func&& func, ProgressArgs&& ...p
 
     auto thread = QThread::create([&value, progressPtr, func = std::forward<Func>(func)]() {
         SCOPE_EXIT {
-            // post progress stuff
+            // finish progress
             value.completeProgress(progressPtr);
         };
 

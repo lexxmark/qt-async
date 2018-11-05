@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <values/AsyncValue.h>
-#include <values/AsyncValueRunable.h>
+#include "mypixmap.h"
 #include <QMainWindow>
 
 namespace Ui {
@@ -10,7 +10,6 @@ class MainWindow;
 }
 
 using AsyncQString = AsyncValue<QString>;
-using AsyncQPixmap = AsyncValueRunableFn<QPixmap>;
 
 class MainWindow : public QMainWindow
 {
@@ -47,8 +46,7 @@ private:
         SPINNER_LINES,
     } m_progressWidgetMode = PROGRESS_MODE::PROGRESS_BAR;
 
-    QString m_imageUrl;
-    AsyncQPixmap m_valuePixmap;
+    MyPixmap m_pixmap;
 };
 
 #endif // MAINWINDOW_H

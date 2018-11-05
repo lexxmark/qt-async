@@ -32,7 +32,7 @@ bool asyncValueRunThreadPool(QThreadPool *pool, AsyncValueType& value, Func&& fu
 
     QtConcurrent::run(pool, [&value, progressPtr, func = std::forward<Func>(func)](){
         SCOPE_EXIT {
-            // post progress stuff
+            // finish progress
             value.completeProgress(progressPtr);
         };
 

@@ -47,12 +47,12 @@ public:
             return;
 
         // run later
-        deferImpl([this] (ProgressType& progress, ThisType& value) {
+        deferImpl([this] (ProgressType& progress, ThisType&) {
 
             for (;;)
             {
                 // try to calculate value
-                runImpl(progress, value);
+                runImpl(progress);
                 // if no rerun was requested -> we good to exit
                 if (!progress.resetIfRerunRequested())
                     break;
@@ -63,7 +63,7 @@ public:
 
 protected:
     virtual void deferImpl(RunFnType&& func) = 0;
-    virtual void runImpl(ProgressType&, ThisType&) = 0;
+    virtual void runImpl(ProgressType& progress) = 0;
 };
 
 

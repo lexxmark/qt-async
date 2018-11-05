@@ -2,78 +2,26 @@
 #include "ui_MainWindow.h"
 #include <QDesktopWidget>
 #include <QFileDialog>
-#include <QBitmap>
 #include "widgets/AsyncWidget.h"
 #include "widgets/AsyncWidgetProgressSpinner.h"
 #include "values/AsyncValueRunThreadPool.h"
-#include "values/AsyncValueRunThread.h"
 #include "values/AsyncValueRunNetwork.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    m_value(this, AsyncInitByValue{}, "Hello World!"),
-    m_valuePixmap(AsyncInitByError{}, "Select image file path.")
+    m_value(this, AsyncInitByValue{}, "Hello World!")
 {
     ui->setupUi(this);
     move(QApplication::desktop()->availableGeometry().center() - rect().center());
 
-    // init async image stuff
+    // init pixmap widget
     {
-        m_valuePixmap.deferFn = [this](const AsyncQPixmap::RunFnType& fn) {
-            m_imageUrl = ui->imageUrl->text();
-            asyncValueRunThread(m_valuePixmap, fn, "Loading image...", ASYNC_CAN_REQUEST_STOP::NO);
-        };
-        m_valuePixmap.runFn = [this](AsyncProgressRerun& progress, AsyncQPixmap& value) {
-
-            QImage image(m_imageUrl);
-
-            for (auto i : {0, 1, 2, 3})
-            {
-                if (progress.isRerunRequested())
-                {
-                    // exit and retry load image with new path
-                    return ;
-                }
-
-                progress.setProgress(i, 4);
-
-                // do some heavy work
-                QThread::sleep(1);
-            }
-
-            if (image.isNull())
-                value.emplaceError(QString("Cannot load image from file '%1'.").arg(m_imageUrl));
-            else
-                value.emplaceValue(QPixmap::fromImage(image));
-        };
-
-        auto valueWidget = new AsyncWidgetFn<AsyncQPixmap>(ui->widget);
-
-        valueWidget->createValueWidget = [](QPixmap& value, QWidget* parent) {
-            auto label = new QLabel(parent);
-            label->setAlignment(Qt::AlignCenter);
-            label->setPixmap(value);
-            label->setStyleSheet("border: 1px solid black");
-            return label;
-        };
-
-        valueWidget->createProgressWidget = [this](AsyncProgress& progress, QWidget* parent)->QWidget* {
-            switch (m_progressWidgetMode) {
-            case PROGRESS_MODE::SPINNER_LINES:
-                return new AsyncWidgetProgressSpinner(progress, parent);
-
-            default:
-                return new AsyncWidgetProgressBar(progress, parent);
-            }
-        };
-
-        valueWidget->setValue(&m_valuePixmap);
-
+        auto valueWidget = new MyPixmapWidget(ui->widget, &m_pixmap);
         ui->imageAsyncWidget->setContentWidget(valueWidget);
     }
 
-
+    // init string widget
     {
         auto valueWidget = new AsyncWidgetFn<AsyncQString>(ui->widget);
 
@@ -177,8 +125,5 @@ void MainWindow::on_imageUrlButton_clicked()
 
 void MainWindow::on_imageUrl_textChanged(const QString & arg)
 {
-    // copy url
-    m_imageUrl = arg;
-    // reload image
-    m_valuePixmap.run();
+    m_pixmap.setImageUrl(arg);
 }

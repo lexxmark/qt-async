@@ -9,7 +9,8 @@ TEMPLATE = app
 SOURCES +=  main.cpp\
             MainWindow.cpp 
 
-HEADERS  += MainWindow.h
+HEADERS  += MainWindow.h \
+    mypixmap.h
 
 FORMS    += MainWindow.ui
 

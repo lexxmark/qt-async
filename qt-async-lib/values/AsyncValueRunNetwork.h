@@ -42,6 +42,7 @@ bool asyncValueRunNetwork(QNetworkReply* reply, AsyncValueType& value, Func&& fu
                                                         func = std::forward<Func>(func)](){
         SCOPE_EXIT {
             reply->deleteLater();
+            // finish progress
             value.completeProgress(progressPtr);
         };
 
