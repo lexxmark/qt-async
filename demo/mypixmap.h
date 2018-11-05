@@ -44,7 +44,7 @@ protected:
     {
         auto url = imageUrl();
 
-        QImage image(m_imageUrl);
+        QImage image(url);
 
         for (auto i : {0, 1, 2, 3})
         {
@@ -61,7 +61,7 @@ protected:
         }
 
         if (image.isNull())
-            emplaceError(QString("Cannot load image from file '%1'.").arg(m_imageUrl));
+            emplaceError(QString("Cannot load image from file '%1'.").arg(url));
         else
             emplaceValue(QPixmap::fromImage(image));
     }
