@@ -255,7 +255,7 @@ User can use the same widgets to show runnable values in GUI:
 # Advanced example
 In the [MyPixmap.h](https://github.com/lexxmark/qt-async/blob/master/demo/mypixmap.h) file you can find a complete example how to adopt async values and widgets for your needs.
 
-Let's say you have some class to load and store QPixmap. Loading image from external url should be done asynchronously. This could be done using async values:
+Let's say you have some class to load and store QPixmap. Loading image from external url should be done asynchronously. Here we just inherit our class from `AsyncValueRunableAbstract<QPixmap>` class and override `deferImpl` and `runImpl` functions. When image url has changed we call `run` to perform image loading in a separate thread:
 ```C++
 class MyPixmap : public AsyncValueRunableAbstract<QPixmap>
 {
