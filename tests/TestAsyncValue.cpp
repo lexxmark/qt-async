@@ -188,7 +188,9 @@ void TestAsyncValue::network()
 
     loop.exec();
 
-    value.accessValue([](int value){
-        QCOMPARE(value, 671);
+    auto success = value.accessValue([](int value){
+        QVERIFY(value > 0);
     });
+
+    QVERIFY(success);
 }
