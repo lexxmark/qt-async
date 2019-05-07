@@ -320,9 +320,12 @@ public:
             SCOPE_EXIT {
                 if (m_waiter->subWaiters > 0)
                 {
-                    // wait for all sub waiters
-                    m_waiter->waitSubWaiters.wait(&m_writeLock);
-                    Q_ASSERT(m_waiter->subWaiters == 0);
+                    do
+                    {
+                        // repeatedly wait for all sub waiters
+                        // because of spurious wakeups
+                        m_waiter->waitSubWaiters.wait(&m_writeLock);
+                    } while (m_waiter->subWaiters != 0);
                 }
 
                 // unregister self as main waiter
@@ -332,11 +335,12 @@ public:
             // register self as main waiter
             m_waiter = &theWaiter;
 
-            // wait for value or error
-            m_waiter->waitValue.wait(&m_writeLock);
-            // process
-            auto res = access(valuePred, errorPred);
-            Q_ASSERT(res && "access should succeeded");
+            do
+            {
+                // repeatedly wait for value or error
+                // because of spurious wakeups
+                m_waiter->waitValue.wait(&m_writeLock);
+            } while (!access(valuePred, errorPred));
         }
         else
         {
@@ -351,11 +355,12 @@ public:
             // register self as subwaiter
             m_waiter->subWaiters += 1;
 
-            // wait for value or error
-            m_waiter->waitValue.wait(&m_writeLock);
-            // process
-            auto res = access(valuePred, errorPred);
-            Q_ASSERT(res && "access should succeed");
+            do
+            {
+                // repeatedly wait for value or error
+                // because of spurious wakeups
+                m_waiter->waitValue.wait(&m_writeLock);
+            } while (!access(valuePred, errorPred));
         }
     }
 
