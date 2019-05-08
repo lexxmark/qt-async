@@ -6,6 +6,7 @@ static QString asyncStyleSheet = R"(
     AsyncWidgetError,
     AsyncWidgetProgressBar,
     AsyncWidgetProgressSpinner,
+    AsyncWidgetProgressCircle,
     QLabel#AsyncLabel {
         background: white;
         border: 1px solid black;
@@ -14,6 +15,8 @@ static QString asyncStyleSheet = R"(
 
 int main(int argc, char *argv[])
 {
+    //QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+
     QApplication a(argc, argv);
 
     a.setStyleSheet(asyncStyleSheet);

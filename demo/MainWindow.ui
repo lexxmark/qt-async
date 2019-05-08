@@ -126,6 +126,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QRadioButton" name="radioButtonCircle">
+               <property name="text">
+                <string>Progress Circle</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QRadioButton" name="radioButtonSpinnerDots">
                <property name="enabled">
                 <bool>false</bool>

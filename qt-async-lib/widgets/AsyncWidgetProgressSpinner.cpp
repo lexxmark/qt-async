@@ -35,7 +35,6 @@ AsyncWidgetProgressSpinner::AsyncWidgetProgressSpinner(AsyncProgress& progress, 
 
 AsyncWidgetProgressSpinner::~AsyncWidgetProgressSpinner()
 {
-
 }
 
 void AsyncWidgetProgressSpinner::updateContent()

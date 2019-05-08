@@ -28,11 +28,9 @@ private slots:
     void on_stopBttn_clicked();
 
     void on_radioButtonProgressBar_clicked();
-
     void on_radioButtonSpinnerLines_clicked();
-
+    void on_radioButtonCircle_clicked();
     void on_imageUrlButton_clicked();
-
     void on_imageUrl_textChanged(const QString &arg1);
 
 private:
@@ -44,6 +42,7 @@ private:
     {
         PROGRESS_BAR,
         SPINNER_LINES,
+        PROGRESS_CIRCLE,
     } m_progressWidgetMode = PROGRESS_MODE::PROGRESS_BAR;
 
     MyPixmap m_pixmap;

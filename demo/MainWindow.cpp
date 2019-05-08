@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include "widgets/AsyncWidget.h"
 #include "widgets/AsyncWidgetProgressSpinner.h"
+#include "widgets/AsyncWidgetProgressCircle.h"
 #include "values/AsyncValueRunThreadPool.h"
 #include "values/AsyncValueRunNetwork.h"
 
@@ -33,6 +34,8 @@ MainWindow::MainWindow(QWidget *parent) :
             switch (m_progressWidgetMode) {
             case PROGRESS_MODE::SPINNER_LINES:
                 return new AsyncWidgetProgressSpinner(progress, parent);
+            case PROGRESS_MODE::PROGRESS_CIRCLE:
+                return new AsyncWidgetProgressCircle(progress, parent);
 
             default:
                 return new AsyncWidgetProgressBar(progress, parent);
@@ -112,6 +115,11 @@ void MainWindow::on_radioButtonProgressBar_clicked()
 void MainWindow::on_radioButtonSpinnerLines_clicked()
 {
     m_progressWidgetMode = PROGRESS_MODE::SPINNER_LINES;
+}
+
+void MainWindow::on_radioButtonCircle_clicked()
+{
+    m_progressWidgetMode = PROGRESS_MODE::PROGRESS_CIRCLE;
 }
 
 void MainWindow::on_imageUrlButton_clicked()
