@@ -1,10 +1,23 @@
-This library has some usefull Qt classes and widgets to show asyncronious operations.
+This library has some usefull Qt classes and widgets for asyncronious operations.
 
 [![qt-async demo video](https://img.youtube.com/vi/aTXOpmVRXq0/maxresdefault.jpg)](https://youtu.be/aTXOpmVRXq0)
 
+# Brief overview
+This library introduces *async values*. Like std::future<T> *async value* holds the *result* of async operation or *error* (if operation was unsuccessfull).
+Also it holds *progress* if async operation is still executing and has *stateChanged* signal that fires when async value is switching between progress, result and error.
+
+
+Like `future<T> std::async(Callable fn)` qt-async library has a set of functions `bool asyncValueRunXXX(AsyncValue& value, Callable fn, ProgressArgs... args)` to make asyncronious calculation for the *value*.
+All these functions switch *value* to a progress state (and pass *args* to progress constructor) and invoke `fn(progress, value)` so *fn* implementation can use *progress* to report executing progress or ask if execution was requested to stop.
+*value* parameter is used to set a result of the operation or an error if calculation has failed.
+
+
+To represent such *async values* in GUI qt-async library has *async widgets*. Every time *async value* state changes, *async widget* creates sub-widget for that state (ProgressWidget, ErrorWidget or ValueWidget).
+Similar to *async value* where user should supply 'fn' that actually calculates value, user should supply to *async widget* a factory how to create ValueWidget (it can be overriden virtual function or std::function).
+
 # Basic use
 
-Declare async value object:
+Declare async value object that holds values of type QString and initialized with string "Hello World!":
 ```C++
 using AsyncQString = AsyncValue<QString>;
 AsyncQString value(AsyncInitByValue{}, "Hello World!");
@@ -17,8 +30,9 @@ When you need to calculate value, call one of the `asyncValueRunXXX` functions:
         // a long calculations
         for (auto i : {0, 1, 2, 3, 4})
         {
-            // report progress
+            // report progress i/5
             progress.setProgress(i, 5);
+			
             // check if calculation was stopped
             if (progress.isStopRequested())
             {
@@ -30,6 +44,7 @@ When you need to calculate value, call one of the `asyncValueRunXXX` functions:
             QThread::sleep(1);
         }
 
+        // do final processing
         progress.setProgress(1.f);
         progress.setMessage("Processing...");
         QThread::sleep(1);
@@ -44,14 +59,14 @@ The available functions are:
 * [asyncValueRunThread](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunThread.h#L23) - creates QThread, does calculations and deletes QThread (don't use this function)
 * [asyncValueRunThreadPool](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunThreadPool.h#L24) - does calculation in a Qt thread pool
 * [asyncValueRunNetwork](https://github.com/lexxmark/qt-async/blob/master/qt-async-lib/values/AsyncValueRunNetwork.h#L24) - waits QNetworkReply and does calculation from it.
-See tests for examples.
+See [runInThread](https://github.com/lexxmark/qt-async/blob/40af2b9e0a07f8d5cae1e62e039c36012b4234d0/tests/TestAsyncValue.cpp#L48) and [runInThreadPool](https://github.com/lexxmark/qt-async/blob/40af2b9e0a07f8d5cae1e62e039c36012b4234d0/tests/TestAsyncValue.cpp#L62) tests for examples.
 
 Somewhere in GUI code declare async widget:
 ```C++
         // create widget
         auto valueWidget = new AsyncWidgetFn<AsyncQString>(parent);
         
-        // set callback that creates widget to show value
+        // set callback that creates sub-widget to show QString value
         valueWidget->createValueWidget = [](QString& value, QWidget* parent) {
             // create QLabel
             return AsyncWidgetProxy::createLabel(value, parent);
@@ -112,22 +127,24 @@ To get the content of the async value use `access` functions and supply callable
    bool success = value.accessValue([](int value) { /* access int value here */ });
 ```
 
-User can assign value using following functions:
+User can assign a value using the following functions:
 ```C++
     AsyncValue<std::string> value(...);
     
     // create value by passing value's constructor parameters
     value.emplaceValue(5, 'b');
+	
     // or create value and pass it to async value
     auto str = std::make_unique<std::string>(5, 'b');
     value.moveValue(std::move(str));
 ```
-User can assign error in a similar way:
+User can assign an error in a similar way:
 ```C++
     AsyncValue<std::string> value(...);
     
     // create error by passing error's constructor parameters
     value.emplaceError("Some error hapenned");
+	
     // or create error and pass it to async value
     auto err = std::make_unique<AsyncError>("Some error hapenned");
     value.moveError(std::move(err));
