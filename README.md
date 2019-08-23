@@ -3,7 +3,7 @@ This library has some usefull Qt classes and widgets for asyncronious operations
 [![qt-async demo video](https://img.youtube.com/vi/aTXOpmVRXq0/maxresdefault.jpg)](https://youtu.be/aTXOpmVRXq0)
 
 # Brief overview
-This library introduces *async values*. Like std::future<T> *async value* holds the *result* of async operation or *error* (if operation was unsuccessfull).
+The library introduces *async values*. Like std::future<T> *async value* holds the *result* of async operation or *error* (if operation was unsuccessfull).
 Also it holds *progress* if async operation is still executing and has *stateChanged* signal that fires when async value is switching between progress, result and error.
 
 
