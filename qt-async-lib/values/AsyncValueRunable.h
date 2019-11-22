@@ -38,7 +38,7 @@ public:
 
     void run()
     {
-        bool isInProgress = accessProgress([](ProgressType& progress) {
+        bool isInProgress = BaseType::accessProgress([](ProgressType& progress) {
             // if we are in progress already -> just request rerun
             progress.requestRerun();
         });
@@ -87,7 +87,7 @@ public:
 
     void run()
     {
-        bool isInProgress = accessProgress([](ProgressType& progress) {
+        bool isInProgress = BaseType::accessProgress([](ProgressType& progress) {
             // if we are in progress already -> just request rerun
             progress.requestRerun();
         });
